@@ -660,243 +660,80 @@ end
             return box
         end
 
-function API.AddSlider(text, min, max, default, callback, step, flag)
-
-    min, max = tonumber(min) or 0, tonumber(max) or 100
-
-    step = tonumber(step) or 1
-
-    if step <= 0 then step = 1 end
-
-    if max < min then min, max = max, min end
-
-
-
-    local configKey = tostring(flag or ("Slider_" .. tostring(text)))
-
-
-
-    local function snapValue(v)
-
-        v = tonumber(v) or min
-
-        v = math.clamp(v, min, max)
-
-        local steps = math.floor(((v - min) / step) + 0.5)
-
-        local snapped = min + (steps * step)
-
-        return math.clamp(snapped, min, max)
-
-    end
-
-
-
-    local function formatValue(v)
-
-        if step >= 1 then
-
-            return tostring(math.floor(v + 0.5))
-
-        end
-
-        local decimals = math.max(0, math.ceil(-math.log10(step)))
-
-        local formatted = string.format("%." .. decimals .. "f", v)
-
-        formatted = formatted:gsub("(%..-)0+$", "%1"):gsub("%.$", "")
-
-        return formatted
-
-    end
-
-
-
-    local value = snapValue(getSaved(configKey, default ~= nil and default or min))
-
-    local frame = new("Frame", {
-
-        Parent = page, Size = UDim2.new(1, 0, 0, 48),
-
-        BackgroundColor3 = THEME.Secondary, BorderSizePixel = 0,
-
-    })
-
-
-
-    corner(frame, 6); padding(frame, 8)
-
-    new("UIListLayout", { Parent = frame, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
-
-    local header = new("Frame", { Parent = frame, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1 })
-
-    new("TextLabel", {
-
-        Parent = header, BackgroundTransparency = 1, Size = UDim2.new(0.6, 0, 1, 0),
-
-        Font = CONFIG.FontBold, Text = text, TextColor3 = THEME.Text,
-
-        TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
-
-    })
-
-    local valueLbl = new("TextLabel", {
-
-        Parent = header, BackgroundTransparency = 1, Size = UDim2.new(0.4, 0, 1, 0),
-
-        Position = UDim2.new(0.6, 0, 0, 0), Font = CONFIG.Font,
-
-        Text = formatValue(value), TextColor3 = THEME.Accent,
-
-        TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right,
-
-    })
-
-    local bar = new("Frame", {
-
-        Parent = frame, Size = UDim2.new(1, 0, 0, 8),
-
-        BackgroundColor3 = THEME.Tertiary, BorderSizePixel = 0,
-
-    })
-
-    corner(bar, 4)
-
-    local initialRel = (max == min) and 0 or ((value - min) / (max - min))
-
-    local fill = new("Frame", {
-
-        Parent = bar, Size = UDim2.new(initialRel, 0, 1, 0),
-
-        BackgroundColor3 = THEME.Accent, BorderSizePixel = 0,
-
-    })
-
-    corner(fill, 4)
-
-
-
-    RuntimeConfig[configKey] = value
-
-    ControlRegistry[configKey] = function(newValue)
-
-        value = snapValue(newValue)
-
-        local rel = (max == min) and 0 or ((value - min) / (max - min))
-
-        fill.Size = UDim2.new(rel, 0, 1, 0)
-
-        valueLbl.Text = formatValue(value)
-
-        if callback then callback(value) end
-
-    end
-
-
-
-    local dragging = false
-
-    local function update(x)
-
-        local rel = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
-
-        local rawValue = min + (max - min) * rel
-
-        value = snapValue(rawValue)
-
-        local snappedRel = (max == min) and 0 or ((value - min) / (max - min))
-
-        fill.Size = UDim2.new(snappedRel, 0, 1, 0)
-
-        valueLbl.Text = formatValue(value)
-
-        saveValue(configKey, value)
-
-        if callback then callback(value) end
-
-    end
-
-
-
-    bar.InputBegan:Connect(function(input)
-
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-
-            or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragging = true; update(input.Position.X)
-
-        end
-
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-
-            or input.UserInputType == Enum.UserInputType.Touch) then
-
-            update(input.Position.X)
-
-        end
-
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-
-            or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragging = false
-
-        end
-
-    end)
-
-
-
-    if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
-
-        task.defer(callback, value)
-
-    end
-
-end
-
-
-        -- Compatibilidade com o formato de configuração estilo Rayfield.
-        -- Exemplo:
-        -- AddSliderCompat(CombatTab, {
-        --     Name = "Hitbox Transparency",
-        --     Range = {0, 1},
-        --     Increment = 0.05,
-        --     CurrentValue = 0.5,
-        --     Flag = "Hitbox_Transparency",
-        --     Callback = function(value) ... end
-        -- })
-        function API.AddSliderCompat(config)
-            config = config or {}
-
-            local range = config.Range or {0, 100}
-            local min = tonumber(range[1]) or 0
-            local max = tonumber(range[2]) or 100
-            local increment = tonumber(config.Increment) or 1
-            local currentValue = tonumber(config.CurrentValue)
-
-            if currentValue == nil then
-                currentValue = min
+function API.AddSlider(text, min, max, default, callback)
+            min, max = min or 0, max or 100
+            local configKey = "Slider_" .. tostring(text)
+            local value = tonumber(getSaved(configKey, default or min)) or (default or min)
+            value = math.clamp(value, min, max)
+            local frame = new("Frame", {
+                Parent = page, Size = UDim2.new(1, 0, 0, 48),
+                BackgroundColor3 = THEME.Secondary, BorderSizePixel = 0,
+            })
+            corner(frame, 6); padding(frame, 8)
+            new("UIListLayout", { Parent = frame, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+            local header = new("Frame", { Parent = frame, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1 })
+            new("TextLabel", {
+                Parent = header, BackgroundTransparency = 1, Size = UDim2.new(0.6, 0, 1, 0),
+                Font = CONFIG.FontBold, Text = text, TextColor3 = THEME.Text,
+                TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+            })
+            local valueLbl = new("TextLabel", {
+                Parent = header, BackgroundTransparency = 1, Size = UDim2.new(0.4, 0, 1, 0),
+                Position = UDim2.new(0.6, 0, 0, 0), Font = CONFIG.Font,
+                Text = tostring(value), TextColor3 = THEME.Accent,
+                TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right,
+            })
+            local bar = new("Frame", {
+                Parent = frame, Size = UDim2.new(1, 0, 0, 8),
+                BackgroundColor3 = THEME.Tertiary, BorderSizePixel = 0,
+            })
+            corner(bar, 4)
+            local fill = new("Frame", {
+                Parent = bar, Size = UDim2.new((value - min) / (max - min), 0, 1, 0),
+                BackgroundColor3 = THEME.Accent, BorderSizePixel = 0,
+            })
+            corner(fill, 4)
+
+            RuntimeConfig[configKey] = value
+            ControlRegistry[configKey] = function(newValue)
+                value = math.clamp(tonumber(newValue) or min, min, max)
+                local rel = (max == min) and 0 or ((value - min) / (max - min))
+                fill.Size = UDim2.new(rel, 0, 1, 0)
+                valueLbl.Text = tostring(value)
+                if callback then callback(value) end
             end
 
-            return API.AddSlider(
-                config.Name or "Slider",
-                min,
-                max,
-                currentValue,
-                config.Callback,
-                increment,
-                config.Flag
-            )
+            local dragging = false
+            local function update(x)
+                local rel = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+                value = math.floor(min + (max - min) * rel + 0.5)
+                fill.Size = UDim2.new(rel, 0, 1, 0)
+                valueLbl.Text = tostring(value)
+                saveValue(configKey, value)
+                if callback then callback(value) end
+            end
+            bar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true; update(input.Position.X)
+                end
+            end)
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                    or input.UserInputType == Enum.UserInputType.Touch) then
+                    update(input.Position.X)
+                end
+            end)
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = false
+                end
+            end)
+
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
+                task.defer(callback, value)
+            end
         end
 
         function API.AddDropdown(text, options, default, callback)
@@ -1191,17 +1028,8 @@ end
         SettingsTab.page.Visible = true
     end)
 
-    local function AddSliderCompat(tab, config)
-        assert(tab and type(tab.AddSliderCompat) == "function", "AddSliderCompat: tab inválida")
-        return tab:AddSliderCompat(config)
-    end
-
-    -- Compatibilidade com chamadas no formato AddSliderCompat(Tab, {...}).
-    _G.AddSliderCompat = AddSliderCompat
-
     return {
         CreateTab = CreateTab,
-        AddSliderCompat = AddSliderCompat,
         Toggle = toggleUI,
         ScreenGui = ScreenGui,
         Main = Main,
