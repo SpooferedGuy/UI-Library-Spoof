@@ -660,7 +660,7 @@ end
             return box
         end
 
-function API.AddSlider(text, min, max, default, callback, step)
+function API.AddSlider(text, min, max, default, callback, step, flag)
 
     min, max = tonumber(min) or 0, tonumber(max) or 100
 
@@ -672,7 +672,7 @@ function API.AddSlider(text, min, max, default, callback, step)
 
 
 
-    local configKey = "Slider_" .. tostring(text)
+    local configKey = tostring(flag or ("Slider_" .. tostring(text)))
 
 
 
@@ -864,6 +864,40 @@ function API.AddSlider(text, min, max, default, callback, step)
 
 end
 
+
+        -- Compatibilidade com o formato de configuração estilo Rayfield.
+        -- Exemplo:
+        -- AddSliderCompat(CombatTab, {
+        --     Name = "Hitbox Transparency",
+        --     Range = {0, 1},
+        --     Increment = 0.05,
+        --     CurrentValue = 0.5,
+        --     Flag = "Hitbox_Transparency",
+        --     Callback = function(value) ... end
+        -- })
+        function API.AddSliderCompat(config)
+            config = config or {}
+
+            local range = config.Range or {0, 100}
+            local min = tonumber(range[1]) or 0
+            local max = tonumber(range[2]) or 100
+            local increment = tonumber(config.Increment) or 1
+            local currentValue = tonumber(config.CurrentValue)
+
+            if currentValue == nil then
+                currentValue = min
+            end
+
+            return API.AddSlider(
+                config.Name or "Slider",
+                min,
+                max,
+                currentValue,
+                config.Callback,
+                increment,
+                config.Flag
+            )
+        end
 
         function API.AddDropdown(text, options, default, callback)
             options = options or {}
@@ -1157,8 +1191,17 @@ end
         SettingsTab.page.Visible = true
     end)
 
+    local function AddSliderCompat(tab, config)
+        assert(tab and type(tab.AddSliderCompat) == "function", "AddSliderCompat: tab inválida")
+        return tab:AddSliderCompat(config)
+    end
+
+    -- Compatibilidade com chamadas no formato AddSliderCompat(Tab, {...}).
+    _G.AddSliderCompat = AddSliderCompat
+
     return {
         CreateTab = CreateTab,
+        AddSliderCompat = AddSliderCompat,
         Toggle = toggleUI,
         ScreenGui = ScreenGui,
         Main = Main,
