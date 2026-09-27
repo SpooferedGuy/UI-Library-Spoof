@@ -307,6 +307,27 @@ local CloseBtn = new("TextButton", {
     })
     corner(CloseBtn, 6)
 
+    local SettingsBtn = new("TextButton", {
+        Parent = Topbar,
+        Size = UDim2.fromOffset(24, 24),
+        Position = UDim2.new(1, -58, 0, 4),
+        BackgroundColor3 = THEME.Tertiary,
+        BorderSizePixel = 0,
+        Font = CONFIG.FontBold,
+        Text = "⚙",
+        TextColor3 = THEME.Text,
+        TextSize = 15,
+        AutoButtonColor = false,
+    })
+    corner(SettingsBtn, 6)
+
+    SettingsBtn.MouseEnter:Connect(function()
+        tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Accent })
+    end)
+    SettingsBtn.MouseLeave:Connect(function()
+        tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Tertiary })
+    end)
+
     -- Sidebar
     local Sidebar = new("ScrollingFrame", {
         Parent = Main,
@@ -818,8 +839,13 @@ function API.AddSlider(text, min, max, default, callback)
     --==============================================
     -- ABA DE CONFIGURAÇÕES / PERFIS
     --==============================================
-    local SettingsAPI = CreateTab("Settings")
+    local SettingsAPI = CreateTab("Settings⚙️")
     local SettingsTab = Tabs[#Tabs]
+
+    -- A aba de Settings fica visível como fallback.
+    -- O botão ⚙️ do Topbar continua abrindo a mesma página.
+    SettingsTab.button.Visible = true
+    SettingsTab.button.LayoutOrder = 999999
 
     local ProfileNameBox = SettingsAPI.AddInput("Configuration Name", "Enter a configuration name...", nil)
 
@@ -997,6 +1023,32 @@ function API.AddSlider(text, min, max, default, callback)
             applyProfile(selectedProfile)
         end)
     end
+
+    local function openSettings()
+        -- Fecha todas as páginas e marca Settings como aba ativa.
+        for _, t in ipairs(Tabs) do
+            t.page.Visible = false
+            tween(t.button, 0.15, {
+                BackgroundTransparency = 1,
+                TextColor3 = THEME.SubText
+            })
+        end
+
+        SettingsTab.page.Visible = true
+        tween(SettingsTab.button, 0.15, {
+            BackgroundTransparency = 0,
+            TextColor3 = THEME.Text
+        })
+
+        -- Garante que a aba fique acessível mesmo com muitas abas.
+        task.defer(function()
+            pcall(function()
+                Sidebar.CanvasPosition = Vector2.new(0, math.max(0, Sidebar.AbsoluteCanvasSize.Y))
+            end)
+        end)
+    end
+
+    SettingsBtn.MouseButton1Click:Connect(openSettings)
 
     return {
         CreateTab = CreateTab,
