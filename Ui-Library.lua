@@ -307,24 +307,19 @@ local CloseBtn = new("TextButton", {
     })
     corner(CloseBtn, 6)
 
-    -- Botão de configurações: independente de layout/clipping/ZIndex dos demais elementos.
     local SettingsBtn = new("TextButton", {
-        Parent = ScreenGui,
-        Size = UDim2.fromOffset(34, 34),
-        Position = UDim2.new(0.5, CONFIG.Width/2 - 82, 0.5, -CONFIG.Height/2 + 3),
+        Parent = Topbar,
+        Size = UDim2.fromOffset(24, 24),
+        Position = UDim2.new(1, -58, 0, 4),
         BackgroundColor3 = THEME.Tertiary,
         BorderSizePixel = 0,
         Font = CONFIG.FontBold,
         Text = "⚙",
         TextColor3 = THEME.Text,
-        TextSize = 18,
+        TextSize = 15,
         AutoButtonColor = false,
-        Visible = true,
-        Active = true,
-        ZIndex = 1000,
     })
-    corner(SettingsBtn, 7)
-    stroke(SettingsBtn, THEME.Stroke, 1)
+    corner(SettingsBtn, 6)
 
     SettingsBtn.MouseEnter:Connect(function()
         tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Accent })
@@ -1025,23 +1020,13 @@ function API.AddSlider(text, min, max, default, callback)
         end)
     end
 
-    local function openSettings()
-        Main.Visible = true
-        Main.ZIndex = 5
-        SettingsBtn.Visible = true
-        SettingsBtn.ZIndex = 1000
-
+    SettingsBtn.MouseButton1Click:Connect(function()
         for _, t in ipairs(Tabs) do
             t.page.Visible = false
             tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
         end
-
         SettingsTab.page.Visible = true
-        SettingsTab.page.ZIndex = 900
-    end
-
-    SettingsBtn.MouseButton1Click:Connect(openSettings)
-    SettingsBtn.Activated:Connect(openSettings)
+    end)
 
     return {
         CreateTab = CreateTab,
