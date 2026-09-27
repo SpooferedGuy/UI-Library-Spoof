@@ -1020,12 +1020,22 @@ function API.AddSlider(text, min, max, default, callback)
         end)
     end
 
-    SettingsBtn.MouseButton1Click:Connect(function()
+    SettingsBtn.Activated:Connect(function()
+        -- Força a aba de configurações a aparecer, independentemente
+        -- do estado/visibilidade dos botões das abas.
         for _, t in ipairs(Tabs) do
             t.page.Visible = false
-            tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
+            if t.button and t.button ~= SettingsTab.button then
+                t.button.BackgroundTransparency = 1
+                t.button.TextColor3 = THEME.SubText
+            end
         end
         SettingsTab.page.Visible = true
+        SettingsTab.page.ZIndex = 50
+        SettingsTab.page.Active = true
+        SettingsBtn.ZIndex = 100
+        Main.Visible = true
+        Main.ZIndex = 5
     end)
 
     return {
