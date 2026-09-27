@@ -307,23 +307,23 @@ local CloseBtn = new("TextButton", {
     })
     corner(CloseBtn, 6)
 
-    -- Botão de configurações: fica independente do layout da Topbar.
-    -- Assim ele continua visível mesmo se outro elemento cobrir a Topbar.
+    -- Botão de configurações: independente de layout/clipping/ZIndex dos demais elementos.
     local SettingsBtn = new("TextButton", {
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(34, 28),
-        Position = UDim2.new(0.5, CONFIG.Width/2 - 72, 0.5, -CONFIG.Height/2 + 2),
+        Size = UDim2.fromOffset(34, 34),
+        Position = UDim2.new(0.5, CONFIG.Width/2 - 82, 0.5, -CONFIG.Height/2 + 3),
         BackgroundColor3 = THEME.Tertiary,
         BorderSizePixel = 0,
-        Font = Enum.Font.GothamBold,
-        Text = "CFG",
+        Font = CONFIG.FontBold,
+        Text = "⚙",
         TextColor3 = THEME.Text,
-        TextSize = 11,
+        TextSize = 18,
         AutoButtonColor = false,
-        ZIndex = 1000,
         Visible = true,
+        Active = true,
+        ZIndex = 1000,
     })
-    corner(SettingsBtn, 6)
+    corner(SettingsBtn, 7)
     stroke(SettingsBtn, THEME.Stroke, 1)
 
     SettingsBtn.MouseEnter:Connect(function()
@@ -1027,15 +1027,17 @@ function API.AddSlider(text, min, max, default, callback)
 
     local function openSettings()
         Main.Visible = true
-        Main.ZIndex = 50
-        SettingsTab.page.Visible = true
-        SettingsTab.page.ZIndex = 100
+        Main.ZIndex = 5
+        SettingsBtn.Visible = true
+        SettingsBtn.ZIndex = 1000
+
         for _, t in ipairs(Tabs) do
-            if t.page ~= SettingsTab.page then
-                t.page.Visible = false
-            end
+            t.page.Visible = false
             tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
         end
+
+        SettingsTab.page.Visible = true
+        SettingsTab.page.ZIndex = 900
     end
 
     SettingsBtn.MouseButton1Click:Connect(openSettings)
