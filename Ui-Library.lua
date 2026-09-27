@@ -307,27 +307,6 @@ local CloseBtn = new("TextButton", {
     })
     corner(CloseBtn, 6)
 
-    local SettingsBtn = new("TextButton", {
-        Parent = Topbar,
-        Size = UDim2.fromOffset(24, 24),
-        Position = UDim2.new(1, -58, 0, 4),
-        BackgroundColor3 = THEME.Tertiary,
-        BorderSizePixel = 0,
-        Font = CONFIG.FontBold,
-        Text = "⚙",
-        TextColor3 = THEME.Text,
-        TextSize = 15,
-        AutoButtonColor = false,
-    })
-    corner(SettingsBtn, 6)
-
-    SettingsBtn.MouseEnter:Connect(function()
-        tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Accent })
-    end)
-    SettingsBtn.MouseLeave:Connect(function()
-        tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Tertiary })
-    end)
-
     -- Sidebar
     local Sidebar = new("ScrollingFrame", {
         Parent = Main,
@@ -841,7 +820,6 @@ function API.AddSlider(text, min, max, default, callback)
     --==============================================
     local SettingsAPI = CreateTab("Settings")
     local SettingsTab = Tabs[#Tabs]
-    SettingsTab.button.Visible = false
 
     local ProfileNameBox = SettingsAPI.AddInput("Configuration Name", "Enter a configuration name...", nil)
 
@@ -1019,14 +997,6 @@ function API.AddSlider(text, min, max, default, callback)
             applyProfile(selectedProfile)
         end)
     end
-
-    SettingsBtn.MouseButton1Click:Connect(function()
-        for _, t in ipairs(Tabs) do
-            t.page.Visible = false
-            tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
-        end
-        SettingsTab.page.Visible = true
-    end)
 
     return {
         CreateTab = CreateTab,
