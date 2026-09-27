@@ -307,19 +307,24 @@ local CloseBtn = new("TextButton", {
     })
     corner(CloseBtn, 6)
 
+    -- Botão de configurações: fica independente do layout da Topbar.
+    -- Assim ele continua visível mesmo se outro elemento cobrir a Topbar.
     local SettingsBtn = new("TextButton", {
-        Parent = Topbar,
-        Size = UDim2.fromOffset(24, 24),
-        Position = UDim2.new(1, -58, 0, 4),
+        Parent = ScreenGui,
+        Size = UDim2.fromOffset(34, 28),
+        Position = UDim2.new(0.5, CONFIG.Width/2 - 72, 0.5, -CONFIG.Height/2 + 2),
         BackgroundColor3 = THEME.Tertiary,
         BorderSizePixel = 0,
-        Font = CONFIG.FontBold,
-        Text = "⚙",
+        Font = Enum.Font.GothamBold,
+        Text = "CFG",
         TextColor3 = THEME.Text,
-        TextSize = 15,
+        TextSize = 11,
         AutoButtonColor = false,
+        ZIndex = 1000,
+        Visible = true,
     })
     corner(SettingsBtn, 6)
+    stroke(SettingsBtn, THEME.Stroke, 1)
 
     SettingsBtn.MouseEnter:Connect(function()
         tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Accent })
@@ -1020,23 +1025,21 @@ function API.AddSlider(text, min, max, default, callback)
         end)
     end
 
-    SettingsBtn.Activated:Connect(function()
-        -- Força a aba de configurações a aparecer, independentemente
-        -- do estado/visibilidade dos botões das abas.
-        for _, t in ipairs(Tabs) do
-            t.page.Visible = false
-            if t.button and t.button ~= SettingsTab.button then
-                t.button.BackgroundTransparency = 1
-                t.button.TextColor3 = THEME.SubText
-            end
-        end
-        SettingsTab.page.Visible = true
-        SettingsTab.page.ZIndex = 50
-        SettingsTab.page.Active = true
-        SettingsBtn.ZIndex = 100
+    local function openSettings()
         Main.Visible = true
-        Main.ZIndex = 5
-    end)
+        Main.ZIndex = 50
+        SettingsTab.page.Visible = true
+        SettingsTab.page.ZIndex = 100
+        for _, t in ipairs(Tabs) do
+            if t.page ~= SettingsTab.page then
+                t.page.Visible = false
+            end
+            tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
+        end
+    end
+
+    SettingsBtn.MouseButton1Click:Connect(openSettings)
+    SettingsBtn.Activated:Connect(openSettings)
 
     return {
         CreateTab = CreateTab,
