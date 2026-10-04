@@ -12,6 +12,8 @@ local DEFAULT_CONFIG = {
     Title = "UI Library",
     ScriptName = "CustomUILibrary",
     IconImage = "https://plain-enam-prod-public.komododecks.com/202609/25/Ll3LoZyPiyuIrr6s4hw5/image.png",
+    -- ADICIONE ESTA LINHA ABAIXO (coloque o link da sua imagem transparente):
+    BackgroundImage = "https://cdn.donmai.us/sample/ad/72/__isonash_star_linker_drawn_by_antares_topaz__sample-ad7246454c1a40006ec5b52ad848d623.jpg", 
     Width = 520,
     Height = 300,
 
@@ -48,6 +50,7 @@ local function carregarIcone(url)
 end
 
 DEFAULT_CONFIG.IconImage = carregarIcone(DEFAULT_CONFIG.IconImage)
+DEFAULT_CONFIG.BackgroundImage = carregarIcone(DEFAULT_CONFIG.BackgroundImage)
 
 --==============================================
 -- UTILITÁRIOS
@@ -349,6 +352,22 @@ local CloseBtn = new("TextButton", {
         Position = UDim2.fromOffset(130, 32),
         BackgroundTransparency = 1,
     })
+
+-- Imagem de Fundo (Marca d'água)
+if CONFIG.BackgroundImage then
+    local BgImage = new("ImageLabel", {
+        Parent = Container, -- Coloca dentro do container para ficar atrás dos botões
+        Size = UDim2.fromScale(1, 1), -- Ocupa todo o espaço do container
+        BackgroundTransparency = 1, -- Fundo do label transparente
+        Image = CONFIG.BackgroundImage,
+        ImageTransparency = 0.5, -- Ajuste aqui a transparência (0 = opaco, 1 = invisível)
+        ScaleType = Enum.ScaleType.Fit, -- Ajusta a imagem para caber sem distorcer
+        ZIndex = 1, -- Fica atrás dos botões (que geralmente são ZIndex 2 ou maior)
+    })
+    
+    -- Opcional: Se quiser que a imagem fique no centro exato, mesmo se a janela for redimensionada
+    -- Você pode usar Size = UDim2.new(0, 400, 0, 400) e Position = UDim2.new(0.5, -200, 0.5, -200)
+end
 
     --==============================================
     -- Toggle
