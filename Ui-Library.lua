@@ -362,7 +362,7 @@ if CONFIG.BackgroundImage then
         Parent = Container, 
         
         -- TESTE: Use um tamanho fixo GRANDE para ver se funciona
-        Size = UDim2.fromOffset(600, 300), -- 600px de largura, 300px de altura
+        Size = UDim2.fromOffset(300, 300), -- 600px de largura, 300px de altura
         
         -- Posição: começa na esquerda, mas se for maior que o Container, vai vazar
         Position = UDim2.fromOffset(0.5, 0),
