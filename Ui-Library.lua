@@ -6,6 +6,21 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 --==============================================
+-- PASTA DA LIBRARY
+--==============================================
+local LIBRARY_FOLDER = "Spoof-Hub" -- Nome da pasta (mude se quiser)
+
+local function ensureFolder()
+    if type(makefolder) == "function" and type(isfolder) == "function" then
+        if not isfolder(LIBRARY_FOLDER) then
+            pcall(makefolder, LIBRARY_FOLDER)
+        end
+    end
+end
+
+ensureFolder()
+
+--==============================================
 -- DEFAULTS (o Config sobrescreve)
 --==============================================
 local DEFAULT_CONFIG = {
@@ -37,13 +52,15 @@ local DEFAULT_CONFIG = {
 }
 
 local function carregarIcone(url, fileName)
-    -- Se não passar nome, usa o padrão antigo para não quebrar
     fileName = fileName or "ui_icon.png" 
+    
+    -- Adiciona a pasta ao caminho do arquivo
+    local fullPath = LIBRARY_FOLDER .. "/" .. fileName
     
     local ok, resultado = pcall(function()
         local dados = game:HttpGet(url)
-        writefile(fileName, dados)
-        return getcustomasset(fileName)
+        writefile(fullPath, dados)
+        return getcustomasset(fullPath)
     end)
     if ok then
         return resultado
@@ -127,7 +144,7 @@ end
 local function getConfigFileName(config)
     local safeName = tostring(config.ScriptName or "CustomUILibrary")
         :gsub("[^%w_%-]", "_")
-    return safeName .. "_config.json"
+    return LIBRARY_FOLDER .. "/" .. safeName .. "_config.json" -- ADICIONADO A PASTA
 end
 
 local function canUseFileApi()
@@ -137,7 +154,14 @@ local function canUseFileApi()
 end
 
 local function loadSavedConfig(fileName)
-    if not canUseFileApi() or not isfile(fileName) then
+    if not canUseFileApi() then return {} end
+    
+    -- Verifica se a pasta existe (segurança)
+    if type(isfolder) == "function" and not isfolder(LIBRARY_FOLDER) then
+        return {}
+    end
+    
+    if not isfile(fileName) then
         return {}
     end
 
@@ -154,6 +178,9 @@ local function saveConfig(fileName, data)
     if not canUseFileApi() then
         return false
     end
+    
+    -- Garante que a pasta existe antes de salvar
+    ensureFolder()
 
     local encoded = jsonEncode(data)
     if not encoded then
@@ -171,7 +198,7 @@ local function Build(userConfig)
     local THEME = CONFIG.Theme
 
     local ConfigFileName = getConfigFileName(CONFIG)
-    local ProfileFileName = tostring(CONFIG.ScriptName or "CustomUILibrary") .. "_profiles.json"
+    local ProfileFileName = LIBRARY_FOLDER .. "/" .. tostring(CONFIG.ScriptName or "CustomUILibrary") .. "_profiles.json"
     local SavedConfig = CONFIG.loadSaveConfig and loadSavedConfig(ConfigFileName) or {}
     local RuntimeConfig = {}
     local ControlRegistry = {}
