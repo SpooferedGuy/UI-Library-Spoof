@@ -360,10 +360,10 @@ local CloseBtn = new("TextButton", {
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
-        Size = UDim2.fromScale(2, 2), 
+        Size = UDim2.fromOffset(500, 300),
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.3, -- Bem transparente para não atrapalhar a leitura
+        ImageTransparency = 1, -- Bem transparente para não atrapalhar a leitura
         ScaleType = Enum.ScaleType.Fit, 
         ZIndex = 10, -- NA FRENTE DE TUDO
         Active = false, -- Não bloqueia cliques
