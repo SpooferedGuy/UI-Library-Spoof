@@ -369,7 +369,7 @@ if CONFIG.BackgroundImage then
         
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.7, 
+        ImageTransparency = 0, 
         
         -- MUDANÇA IMPORTANTE: Stretch para esticar de verdade
         ScaleType = Enum.ScaleType.Stretch, 
