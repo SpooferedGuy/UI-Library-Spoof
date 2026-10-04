@@ -351,7 +351,7 @@ local CloseBtn = new("TextButton", {
     Size = UDim2.new(1, -130, 1, -32),
     Position = UDim2.fromOffset(130, 32),
     BackgroundTransparency = 1,
-    ZIndex = 0, -- ADICIONE ISSO: Garante que o container base é a camada 0
+    ZIndex = 10, -- ADICIONE ISSO: Garante que o container base é a camada 0
 })
 
 -- Imagem de Fundo (Marca d'água)
