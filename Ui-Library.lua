@@ -36,11 +36,14 @@ local DEFAULT_CONFIG = {
     AutoLoadLastConfig = false,
 }
 
-local function carregarIcone(url)
+local function carregarIcone(url, fileName)
+    -- Se não passar nome, usa o padrão antigo para não quebrar
+    fileName = fileName or "ui_icon.png" 
+    
     local ok, resultado = pcall(function()
         local dados = game:HttpGet(url)
-        writefile("ui_icon.png", dados)
-        return getcustomasset("ui_icon.png")
+        writefile(fileName, dados)
+        return getcustomasset(fileName)
     end)
     if ok then
         return resultado
@@ -49,8 +52,8 @@ local function carregarIcone(url)
     end
 end
 
-DEFAULT_CONFIG.IconImage = carregarIcone(DEFAULT_CONFIG.IconImage)
-DEFAULT_CONFIG.BackgroundImage = carregarIcone(DEFAULT_CONFIG.BackgroundImage)
+DEFAULT_CONFIG.IconImage = carregarIcone(DEFAULT_CONFIG.IconImage, "ui_icon.png")
+DEFAULT_CONFIG.BackgroundImage = carregarIcone(DEFAULT_CONFIG.BackgroundImage, "ui_background.png")
 
 --==============================================
 -- UTILITÁRIOS
@@ -357,10 +360,10 @@ local CloseBtn = new("TextButton", {
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
-        Size = UDim2.fromScale(1, 1), 
+        Size = UDim2.fromScale(1.2, 1), 
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.7, -- Bem transparente para não atrapalhar a leitura
+        ImageTransparency = 0.9, -- Bem transparente para não atrapalhar a leitura
         ScaleType = Enum.ScaleType.Fit, 
         ZIndex = 10, -- NA FRENTE DE TUDO
         Active = false, -- Não bloqueia cliques
