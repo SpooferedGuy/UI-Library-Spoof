@@ -363,7 +363,7 @@ if CONFIG.BackgroundImage then
         Size = UDim2.fromOffset(500, 300),
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 1, -- Bem transparente para não atrapalhar a leitura
+        ImageTransparency = 0, -- Bem transparente para não atrapalhar a leitura
         ScaleType = Enum.ScaleType.Fit, 
         ZIndex = 10, -- NA FRENTE DE TUDO
         Active = false, -- Não bloqueia cliques
