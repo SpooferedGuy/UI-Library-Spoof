@@ -361,7 +361,7 @@ if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
         Size = UDim2.fromScale(0.8, 1), -- ALTERE AQUI para o tamanho desejado
-        -- Position = UDim2.fromScale(0, 0), -- Descomente e ajuste se quiser mover a imagem
+        -- Position = UDim2.fromScale(0.5, 0), -- Descomente e ajuste se quiser mover a imagem
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
         ImageTransparency = 0.6, -- Ajuste a transparência (0 = opaco, 1 = invisível)
