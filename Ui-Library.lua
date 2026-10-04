@@ -28,7 +28,7 @@ local DEFAULT_CONFIG = {
     ScriptName = "CustomUILibrary",
     IconImage = "https://plain-enam-prod-public.komododecks.com/202609/25/Ll3LoZyPiyuIrr6s4hw5/image.png",
     -- ADICIONE ESTA LINHA ABAIXO (coloque o link da sua imagem transparente):
-    BackgroundImage = "https://cdn.donmai.us/sample/ad/72/__isonash_star_linker_drawn_by_antares_topaz__sample-ad7246454c1a40006ec5b52ad848d623.jpg", 
+    BackgroundImage = "https://plain-enam-prod-public.komododecks.com/202610/04/T65YZWSPkCEfErPaFZ2g/image.png", 
     Width = 520,
     Height = 300,
 
