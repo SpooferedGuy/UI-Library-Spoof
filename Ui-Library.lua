@@ -347,26 +347,25 @@ local CloseBtn = new("TextButton", {
     new("UIListLayout", { Parent = Sidebar, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
 
     local Container = new("Frame", {
-        Parent = Main,
-        Size = UDim2.new(1, -130, 1, -32),
-        Position = UDim2.fromOffset(130, 32),
-        BackgroundTransparency = 1,
-    })
+    Parent = Main,
+    Size = UDim2.new(1, -130, 1, -32),
+    Position = UDim2.fromOffset(130, 32),
+    BackgroundTransparency = 1,
+    ZIndex = 0, -- ADICIONE ISSO: Garante que o container base é a camada 0
+})
 
 -- Imagem de Fundo (Marca d'água)
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
-        Parent = Container, -- Coloca dentro do container para ficar atrás dos botões
-        Size = UDim2.fromScale(1, 1), -- Ocupa todo o espaço do container
-        BackgroundTransparency = 1, -- Fundo do label transparente
+        Parent = Container, 
+        Size = UDim2.fromScale(1, 1), 
+        BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.5, -- Ajuste aqui a transparência (0 = opaco, 1 = invisível)
-        ScaleType = Enum.ScaleType.Fit, -- Ajusta a imagem para caber sem distorcer
-        ZIndex = 1, -- Fica atrás dos botões (que geralmente são ZIndex 2 ou maior)
+        ImageTransparency = 0.6, -- Ajuste aqui: 0.6 deixa ela bem apagada como na foto. Se quiser mais forte, use 0.4.
+        ScaleType = Enum.ScaleType.Fit, 
+        ZIndex = 0, -- MANTENHA 0: Fica atrás dos botões (que são 1 ou 2)
+        Active = false, -- IMPORTANTE: Impede que a imagem bloqueie os cliques nos botões
     })
-    
-    -- Opcional: Se quiser que a imagem fique no centro exato, mesmo se a janela for redimensionada
-    -- Você pode usar Size = UDim2.new(0, 400, 0, 400) e Position = UDim2.new(0.5, -200, 0.5, -200)
 end
 
     --==============================================
