@@ -351,20 +351,19 @@ local CloseBtn = new("TextButton", {
     Size = UDim2.new(1, -130, 1, -32),
     Position = UDim2.fromOffset(130, 32),
     BackgroundTransparency = 1,
-    ZIndex = 10, -- ADICIONE ISSO: Garante que o container base é a camada 0
+    ZIndex = 0, -- ADICIONE ISSO: Garante que o container base é a camada 0
 })
 
--- Imagem de Fundo (Marca d'água)
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
         Size = UDim2.fromScale(1, 1), 
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.6, -- Ajuste aqui: 0.6 deixa ela bem apagada como na foto. Se quiser mais forte, use 0.4.
+        ImageTransparency = 0.7, -- Bem transparente para não atrapalhar a leitura
         ScaleType = Enum.ScaleType.Fit, 
-        ZIndex = 100, -- MANTENHA 0: Fica atrás dos botões (que são 1 ou 2)
-        Active = false, -- IMPORTANTE: Impede que a imagem bloqueie os cliques nos botões
+        ZIndex = 10, -- NA FRENTE DE TUDO
+        Active = false, -- Não bloqueia cliques
     })
 end
 
