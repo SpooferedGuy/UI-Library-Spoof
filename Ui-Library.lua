@@ -365,7 +365,7 @@ if CONFIG.BackgroundImage then
         Size = UDim2.fromOffset(600, 300), -- 600px de largura, 300px de altura
         
         -- Posição: começa na esquerda, mas se for maior que o Container, vai vazar
-        Position = UDim2.fromOffset(0, 0),
+        Position = UDim2.fromOffset(0.5, 0),
         
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
