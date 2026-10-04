@@ -360,7 +360,7 @@ local CloseBtn = new("TextButton", {
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
-        Size = UDim2.fromScale(1.5, 1), -- ALTERE AQUI para o tamanho desejado
+        Size = UDim2.fromScale(0.8, 1), -- ALTERE AQUI para o tamanho desejado
         -- Position = UDim2.fromScale(0, 0), -- Descomente e ajuste se quiser mover a imagem
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
