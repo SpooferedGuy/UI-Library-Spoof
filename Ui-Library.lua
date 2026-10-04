@@ -361,17 +361,19 @@ if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
         
-        -- AQUI ESTÁ A MÁGICA:
-        -- Size: (Largura, Altura). Aumentei a Largura para 1.5 e mantive a Altura em 1.
-        Size = UDim2.fromScale(1.5, 1), 
+        -- TESTE: Use um tamanho fixo GRANDE para ver se funciona
+        Size = UDim2.fromOffset(600, 300), -- 600px de largura, 300px de altura
         
-        -- Position: (X, Y). X=0 mantém a imagem colada na esquerda. Y=0 mantém no topo.
-        Position = UDim2.fromScale(0, 0), 
+        -- Posição: começa na esquerda, mas se for maior que o Container, vai vazar
+        Position = UDim2.fromOffset(0, 0),
         
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
         ImageTransparency = 0.6, 
-        ScaleType = Enum.ScaleType.Fit, 
+        
+        -- MUDANÇA IMPORTANTE: Stretch para esticar de verdade
+        ScaleType = Enum.ScaleType.Stretch, 
+        
         ZIndex = 10, 
         Active = false, 
     })
