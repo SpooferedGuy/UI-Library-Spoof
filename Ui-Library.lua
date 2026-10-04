@@ -360,11 +360,17 @@ local CloseBtn = new("TextButton", {
 if CONFIG.BackgroundImage then
     local BgImage = new("ImageLabel", {
         Parent = Container, 
-        Size = UDim2.fromScale(0.8, 1), -- ALTERE AQUI para o tamanho desejado
-        -- Position = UDim2.fromScale(0.5, 0), -- Descomente e ajuste se quiser mover a imagem
+        
+        -- AQUI ESTÁ A MÁGICA:
+        -- Size: (Largura, Altura). Aumentei a Largura para 1.5 e mantive a Altura em 1.
+        Size = UDim2.fromScale(1.5, 1), 
+        
+        -- Position: (X, Y). X=0 mantém a imagem colada na esquerda. Y=0 mantém no topo.
+        Position = UDim2.fromScale(0, 0), 
+        
         BackgroundTransparency = 1, 
         Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.6, -- Ajuste a transparência (0 = opaco, 1 = invisível)
+        ImageTransparency = 0.6, 
         ScaleType = Enum.ScaleType.Fit, 
         ZIndex = 10, 
         Active = false, 
