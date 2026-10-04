@@ -363,7 +363,7 @@ if CONFIG.BackgroundImage then
         Image = CONFIG.BackgroundImage,
         ImageTransparency = 0.6, -- Ajuste aqui: 0.6 deixa ela bem apagada como na foto. Se quiser mais forte, use 0.4.
         ScaleType = Enum.ScaleType.Fit, 
-        ZIndex = 0, -- MANTENHA 0: Fica atrás dos botões (que são 1 ou 2)
+        ZIndex = 100, -- MANTENHA 0: Fica atrás dos botões (que são 1 ou 2)
         Active = false, -- IMPORTANTE: Impede que a imagem bloqueie os cliques nos botões
     })
 end
