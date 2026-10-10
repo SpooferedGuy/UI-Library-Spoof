@@ -354,6 +354,28 @@ local CloseBtn = new("TextButton", {
     })
     corner(SettingsBtn, 6)
 
+    local SearchBtn = new("TextButton", {
+        Parent = Topbar,
+        Size = UDim2.fromOffset(24, 24),
+        Position = UDim2.new(1, -86, 0, 4),
+        BackgroundColor3 = THEME.Tertiary,
+        BorderSizePixel = 0,
+        Font = CONFIG.FontBold,
+        Text = "🔎",
+        TextColor3 = THEME.Text,
+        TextSize = 14,
+        AutoButtonColor = false,
+        ZIndex = 10,
+    })
+    corner(SearchBtn, 6)
+
+    SearchBtn.MouseEnter:Connect(function()
+        tween(SearchBtn, 0.15, { BackgroundColor3 = THEME.Accent })
+    end)
+    SearchBtn.MouseLeave:Connect(function()
+        tween(SearchBtn, 0.15, { BackgroundColor3 = THEME.Tertiary })
+    end)
+
     SettingsBtn.MouseEnter:Connect(function()
         tween(SettingsBtn, 0.15, { BackgroundColor3 = THEME.Accent })
     end)
@@ -1076,7 +1098,162 @@ function API.AddSlider(text, min, max, default, callback)
         end)
     end
 
+    -- Pesquisa de abas e funções/controles da biblioteca
+    local SearchPanel = new("Frame", {
+        Parent = Main,
+        Position = UDim2.fromOffset(8, 38),
+        Size = UDim2.new(1, -16, 0, 150),
+        BackgroundColor3 = THEME.Secondary,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 50,
+    })
+    corner(SearchPanel, 8)
+    stroke(SearchPanel, THEME.Stroke, 1)
+
+    local SearchBox = new("TextBox", {
+        Parent = SearchPanel,
+        Position = UDim2.fromOffset(8, 8),
+        Size = UDim2.new(1, -16, 0, 30),
+        BackgroundColor3 = THEME.Tertiary,
+        BorderSizePixel = 0,
+        Font = CONFIG.Font,
+        PlaceholderText = "Pesquisar funções...",
+        PlaceholderColor3 = THEME.SubText,
+        Text = "",
+        TextColor3 = THEME.Text,
+        TextSize = 13,
+        ClearTextOnFocus = false,
+        ZIndex = 51,
+    })
+    corner(SearchBox, 6)
+    padding(SearchBox, 6)
+
+    local SearchResults = new("ScrollingFrame", {
+        Parent = SearchPanel,
+        Position = UDim2.fromOffset(8, 44),
+        Size = UDim2.new(1, -16, 1, -52),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = THEME.Accent,
+        CanvasSize = UDim2.new(),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ZIndex = 51,
+    })
+    new("UIListLayout", {
+        Parent = SearchResults,
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local function refreshSearch(query)
+        for _, child in ipairs(SearchResults:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
+        end
+        query = string.lower(tostring(query or "")):gsub("^%s+", ""):gsub("%s+$", "")
+        if query == "" then return end
+
+        local count = 0
+        for _, tab in ipairs(Tabs) do
+            local tabName = tab.button.Text:gsub("^%s+", "")
+            if string.find(string.lower(tabName), query, 1, true) then
+                count += 1
+                local result = new("TextButton", {
+                    Parent = SearchResults,
+                    Size = UDim2.new(1, -4, 0, 26),
+                    BackgroundColor3 = THEME.Tertiary,
+                    BorderSizePixel = 0,
+                    Font = CONFIG.Font,
+                    Text = "  Aba: " .. tabName,
+                    TextColor3 = THEME.Text,
+                    TextSize = 12,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    AutoButtonColor = false,
+                    ZIndex = 52,
+                })
+                corner(result, 5)
+                result.MouseButton1Click:Connect(function()
+                    for _, other in ipairs(Tabs) do
+                        other.page.Visible = false
+                        tween(other.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
+                    end
+                    tab.page.Visible = true
+                    tween(tab.button, 0.15, { BackgroundTransparency = 0, TextColor3 = THEME.Text })
+                    SearchPanel.Visible = false
+                end)
+            end
+
+            for _, obj in ipairs(tab.page:GetDescendants()) do
+                local textValue
+                if obj:IsA("TextButton") or obj:IsA("TextLabel") or obj:IsA("TextBox") then
+                    textValue = obj.Text
+                end
+                if textValue and textValue ~= "" and string.find(string.lower(textValue), query, 1, true) then
+                    local target = obj
+                    while target.Parent and target.Parent ~= tab.page do
+                        target = target.Parent
+                    end
+                    if target ~= tab.page and target:IsA("GuiObject") then
+                        count += 1
+                        local result = new("TextButton", {
+                            Parent = SearchResults,
+                            Size = UDim2.new(1, -4, 0, 26),
+                            BackgroundColor3 = THEME.Tertiary,
+                            BorderSizePixel = 0,
+                            Font = CONFIG.Font,
+                            Text = "  " .. tabName .. " • " .. textValue:gsub("[\r\n]", " "):sub(1, 55),
+                            TextColor3 = THEME.Text,
+                            TextSize = 12,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            AutoButtonColor = false,
+                            ZIndex = 52,
+                        })
+                        corner(result, 5)
+                        result.MouseButton1Click:Connect(function()
+                            for _, other in ipairs(Tabs) do
+                                other.page.Visible = false
+                                tween(other.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
+                            end
+                            tab.page.Visible = true
+                            tween(tab.button, 0.15, { BackgroundTransparency = 0, TextColor3 = THEME.Text })
+                            task.defer(function()
+                                local y = target.AbsolutePosition.Y - tab.page.AbsolutePosition.Y + tab.page.CanvasPosition.Y - 8
+                                tab.page.CanvasPosition = Vector2.new(0, math.max(0, y))
+                            end)
+                            SearchPanel.Visible = false
+                        end)
+                    end
+                end
+            end
+        end
+        if count == 0 then
+            local empty = new("TextLabel", {
+                Parent = SearchResults,
+                Size = UDim2.new(1, -4, 0, 26),
+                BackgroundTransparency = 1,
+                Font = CONFIG.Font,
+                Text = "Nenhuma função encontrada",
+                TextColor3 = THEME.SubText,
+                TextSize = 12,
+                ZIndex = 52,
+            })
+        end
+    end
+
+    SearchBtn.MouseButton1Click:Connect(function()
+        SearchPanel.Visible = not SearchPanel.Visible
+        if SearchPanel.Visible then
+            refreshSearch(SearchBox.Text)
+            SearchBox:CaptureFocus()
+        end
+    end)
+    SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        refreshSearch(SearchBox.Text)
+    end)
+
     SettingsBtn.MouseButton1Click:Connect(function()
+        SearchPanel.Visible = false
         for _, t in ipairs(Tabs) do
             t.page.Visible = false
             tween(t.button, 0.15, { BackgroundTransparency = 1, TextColor3 = THEME.SubText })
