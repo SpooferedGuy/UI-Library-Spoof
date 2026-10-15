@@ -678,13 +678,12 @@ end
                 if callback then callback(state) end
             end)
 
-            -- Sincroniza o estado inicial com a lógica do script.
-            -- Isso também é necessário quando o controle começa ligado por default
-            -- ou quando o estado veio de um perfil salvo.
-            if callback then
+            -- Só aplica automaticamente o estado quando ele veio de uma
+            -- configuração salva. Toggles novos/defaults não devem iniciar
+            -- scripts por conta própria ao abrir a GUI.
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
                 local initialState = state
                 task.defer(function()
-                    -- Não sobrescreve um estado que o usuário já tenha alterado.
                     if state == initialState then
                         local ok, err = pcall(callback, initialState)
                         if not ok then
