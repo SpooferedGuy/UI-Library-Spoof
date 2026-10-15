@@ -219,15 +219,6 @@ local function Build(userConfig)
         return value
     end
 
-    local function readBoolean(value, defaultValue)
-        if value == true then
-            return true
-        elseif value == false then
-            return false
-        end
-        return defaultValue == true
-    end
-
     local function saveValue(key, value)
         RuntimeConfig[key] = value
         if CONFIG.loadSaveConfig and not ApplyingProfile then
@@ -256,29 +247,16 @@ local function Build(userConfig)
         ApplyingProfile = true
         SavedConfig = cloneConfig(profile)
 
-        -- Fase 1: calcular e validar o estado final inteiro, sem callbacks.
-        local finalConfig = {}
-        for key, currentValue in pairs(RuntimeConfig) do
-            finalConfig[key] = currentValue
-        end
-
-        for key in pairs(ControlRegistry) do
-            local value = profile[key]
-            if string.sub(key, 1, 7) == "Toggle_" then
-                -- Toggle ausente/inválido no perfil fica desligado.
-                finalConfig[key] = readBoolean(value, false)
-            elseif value ~= nil then
-                finalConfig[key] = value
-            end
-        end
-
-        -- Publica todos os valores antes de executar qualquer callback.
-        RuntimeConfig = finalConfig
-
-        -- Fase 2: atualiza os controles e executa cada callback uma vez.
+        -- Aplica os valores do perfil aos controles existentes. Um toggle
+        -- ausente no perfil é considerado false, não herdando estado antigo.
         for key, setter in pairs(ControlRegistry) do
-            local value = finalConfig[key]
+            local value = profile[key]
+            if value == nil and string.sub(key, 1, 7) == "Toggle_" then
+                value = false
+            end
+
             if value ~= nil then
+                RuntimeConfig[key] = value
                 local ok, err = pcall(setter, value)
                 if not ok then
                     warn("[UILibrary] Erro ao aplicar configuração em '" .. tostring(key) .. "': " .. tostring(err))
@@ -657,10 +635,12 @@ end
             return btn
         end
 
-        function API.AddToggle(text, default, callback, stableKey)
-            -- stableKey permite renomear o rótulo sem perder a configuração.
-            local configKey = "Toggle_" .. tostring(stableKey or text)
-            local state = readBoolean(getSaved(configKey, default), default)
+        function API.AddToggle(text, default, callback)
+            local configKey = "Toggle_" .. tostring(text)
+            local fallbackState = type(default) == "boolean" and default or false
+            local savedState = SavedConfig[configKey]
+            local state = type(savedState) == "boolean" and savedState or fallbackState
+            if savedState == false then state = false end
             local frame = new("Frame", {
                 Parent = page, Size = UDim2.new(1, 0, 0, 30),
                 BackgroundColor3 = THEME.Secondary, BorderSizePixel = 0,
@@ -688,7 +668,12 @@ end
 
             RuntimeConfig[configKey] = state
             ControlRegistry[configKey] = function(newValue)
-                state = newValue == true
+                -- Apenas booleanos explícitos são aceitos. Valores ausentes ou
+                -- inválidos não podem transformar um toggle em ligado.
+                if type(newValue) ~= "boolean" then
+                    return
+                end
+                state = newValue
                 switch.BackgroundColor3 = state and THEME.Accent or THEME.Tertiary
                 knob.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.fromOffset(3, 3)
                 if callback then
@@ -1159,37 +1144,12 @@ function API.AddSlider(text, min, max, default, callback)
             return saveConfig(ConfigFileName, RuntimeConfig)
         end,
         LoadConfig = function()
-            local loaded = loadSavedConfig(ConfigFileName)
-            if type(loaded) ~= "table" then
-                return false
+            SavedConfig = loadSavedConfig(ConfigFileName)
+            for key, value in pairs(SavedConfig) do
+                RuntimeConfig[key] = value
+                local setter = ControlRegistry[key]
+                if setter then setter(value) end
             end
-
-            ApplyingProfile = true
-            SavedConfig = cloneConfig(loaded)
-
-            -- Primeiro valida/prepara todos os valores; ainda sem callbacks.
-            local finalConfig = cloneConfig(RuntimeConfig)
-            for key in pairs(ControlRegistry) do
-                local value = loaded[key]
-                if string.sub(key, 1, 7) == "Toggle_" then
-                    finalConfig[key] = readBoolean(value, false)
-                elseif value ~= nil then
-                    finalConfig[key] = value
-                end
-            end
-            RuntimeConfig = finalConfig
-
-            -- Depois aplica cada controle uma única vez.
-            for key, setter in pairs(ControlRegistry) do
-                local value = finalConfig[key]
-                if value ~= nil then
-                    local ok, err = pcall(setter, value)
-                    if not ok then
-                        warn("[UILibrary] Erro ao carregar configuração em '" .. tostring(key) .. "': " .. tostring(err))
-                    end
-                end
-            end
-            ApplyingProfile = false
             return SavedConfig
         end,
         CreateConfig = function(name)
