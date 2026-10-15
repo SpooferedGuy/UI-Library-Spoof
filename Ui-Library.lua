@@ -211,12 +211,6 @@ local function Build(userConfig)
     ProfileData.LastSelected = tostring(ProfileData.LastSelected or "")
     ProfileData.AutoLoad = ProfileData.AutoLoad == true
 
-    -- Se houver um perfil válido para Auto Load, não inicialize callbacks a partir
-    -- do arquivo geral antes de aplicar esse perfil; isso pode ligar scripts antigos.
-    local autoLoadProfileExists = ProfileData.AutoLoad
-        and ProfileData.LastSelected ~= ""
-        and type(ProfileData.Profiles[ProfileData.LastSelected]) == "table"
-
     local function getSaved(key, fallback)
         local value = SavedConfig[key]
         if value == nil then
@@ -253,8 +247,8 @@ local function Build(userConfig)
         ApplyingProfile = true
         SavedConfig = cloneConfig(profile)
 
-        -- Percorre os controles registrados, não apenas as chaves presentes no perfil.
-        -- Assim, um toggle ausente no perfil fica desligado em vez de herdar estado antigo.
+        -- Aplica os valores do perfil aos controles existentes. Um toggle
+        -- ausente no perfil é considerado false, não herdando estado antigo.
         for key, setter in pairs(ControlRegistry) do
             local value = profile[key]
             if value == nil and string.sub(key, 1, 7) == "Toggle_" then
@@ -287,8 +281,10 @@ local function Build(userConfig)
     local ScreenGui = new("ScreenGui", {
         Name = CONFIG.ScriptName,
         ResetOnSpawn = false,
-        DisplayOrder = 2147483647,
-        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        DisplayOrder = 1000000,
+        -- Sibling é importante aqui: Global pode colocar filhos atrás do Main,
+        -- já que muitos elementos usam ZIndex padrão.
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         IgnoreGuiInset = true,
         Parent = playerGui,
     })
@@ -695,7 +691,12 @@ end
             -- Só aplica automaticamente o estado quando ele veio de uma
             -- configuração salva. Toggles novos/defaults não devem iniciar
             -- scripts por conta própria ao abrir a GUI.
-            if CONFIG.loadSaveConfig and not autoLoadProfileExists and SavedConfig[configKey] ~= nil and callback then
+            local validAutoLoadProfile = ProfileData.AutoLoad
+                and ProfileData.LastSelected ~= ""
+                and type(ProfileData.Profiles[ProfileData.LastSelected]) == "table"
+
+            if CONFIG.loadSaveConfig and not validAutoLoadProfile
+                and SavedConfig[configKey] ~= nil and callback then
                 local initialState = state
                 task.defer(function()
                     if state == initialState then
@@ -742,7 +743,7 @@ end
                 if callback then callback(box.Text) end
             end)
 
-            if CONFIG.loadSaveConfig and not autoLoadProfileExists and SavedConfig[configKey] ~= nil and callback then
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
                 task.defer(callback, box.Text)
             end
             return box
@@ -819,7 +820,7 @@ function API.AddSlider(text, min, max, default, callback)
                 end
             end)
 
-            if CONFIG.loadSaveConfig and not autoLoadProfileExists and SavedConfig[configKey] ~= nil and callback then
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
                 task.defer(callback, value)
             end
         end
@@ -916,7 +917,7 @@ function API.AddSlider(text, min, max, default, callback)
                 end
             end)
 
-            if CONFIG.loadSaveConfig and not autoLoadProfileExists and SavedConfig[configKey] ~= nil and callback then
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
                 task.defer(callback, selected)
             end
         end
