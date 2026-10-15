@@ -49,6 +49,7 @@ local DEFAULT_CONFIG = {
     -- Defina loadSaveConfig = true no userConfig para ativar.
     loadSaveConfig = false,
     AutoLoadLastConfig = false,
+    AutoLoadDelay = 3,
 }
 
 local function carregarIcone(url, fileName)
@@ -1116,11 +1117,18 @@ function API.AddSlider(text, min, max, default, callback)
         refreshProfileList()
     end)
 
-    if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
-        task.defer(function()
+if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
+    local delay = tonumber(CONFIG.AutoLoadDelay) or 3
+    task.delay(delay, function()
+        -- Revalida, porque o usuário pode ter desligado o AutoLoad
+        -- ou deletado o perfil durante a espera.
+        if ProfileData.AutoLoad
+            and selectedProfile ~= ""
+            and ProfileData.Profiles[selectedProfile] then
             applyProfile(selectedProfile)
-        end)
-    end
+        end
+    end)
+end
 
     SettingsBtn.MouseButton1Click:Connect(function()
         for _, t in ipairs(Tabs) do
