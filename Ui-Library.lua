@@ -211,7 +211,32 @@ local function Build(userConfig)
     ProfileData.LastSelected = tostring(ProfileData.LastSelected or "")
     ProfileData.AutoLoad = ProfileData.AutoLoad == true
 
+    -- Quando Auto Load está ativo, o perfil selecionado é a fonte da verdade.
+    -- Não reutiliza valores antigos do arquivo de configuração comum.
+    local AutoLoadProfile = nil
+    if ProfileData.AutoLoad and ProfileData.LastSelected ~= ""
+        and type(ProfileData.Profiles[ProfileData.LastSelected]) == "table" then
+        AutoLoadProfile = ProfileData.Profiles[ProfileData.LastSelected]
+        SavedConfig = {}
+        for key, value in pairs(AutoLoadProfile) do
+            SavedConfig[key] = value
+        end
+    end
+
     local function getSaved(key, fallback)
+        if AutoLoadProfile then
+            local value = AutoLoadProfile[key]
+            if value ~= nil then
+                return value
+            end
+            -- Um toggle ausente do perfil deve ficar desligado, não herdar
+            -- um valor true do arquivo antigo nem um default ligado.
+            if string.sub(key, 1, 7) == "Toggle_" then
+                return false
+            end
+            return fallback
+        end
+
         local value = SavedConfig[key]
         if value == nil then
             return fallback
@@ -246,15 +271,28 @@ local function Build(userConfig)
 
         ApplyingProfile = true
         SavedConfig = cloneConfig(profile)
-        for key, value in pairs(profile) do
-            RuntimeConfig[key] = value
-            local setter = ControlRegistry[key]
-            if setter then
+
+        -- Aplica os valores do perfil aos controles já criados.
+        -- Toggles que não existem no perfil são desligados explicitamente.
+        for key, setter in pairs(ControlRegistry) do
+            local value = profile[key]
+            if value == nil and string.sub(key, 1, 7) == "Toggle_" then
+                value = false
+            end
+
+            if value ~= nil then
+                RuntimeConfig[key] = value
                 local ok, err = pcall(setter, value)
                 if not ok then
                     warn("[UILibrary] Erro ao aplicar configuração em '" .. tostring(key) .. "': " .. tostring(err))
                 end
             end
+        end
+
+        -- Atualiza também as chaves do perfil que ainda não têm controle
+        -- registrado, sem disparar callbacks inexistentes.
+        for key, value in pairs(profile) do
+            RuntimeConfig[key] = value
         end
         ApplyingProfile = false
 
