@@ -250,7 +250,10 @@ local function Build(userConfig)
             RuntimeConfig[key] = value
             local setter = ControlRegistry[key]
             if setter then
-                setter(value)
+                local ok, err = pcall(setter, value)
+                if not ok then
+                    warn("[UILibrary] Erro ao aplicar configuração em '" .. tostring(key) .. "': " .. tostring(err))
+                end
             end
         end
         ApplyingProfile = false
@@ -655,7 +658,12 @@ end
                 state = newValue == true
                 switch.BackgroundColor3 = state and THEME.Accent or THEME.Tertiary
                 knob.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.fromOffset(3, 3)
-                if callback then callback(state) end
+                if callback then
+                    local ok, err = pcall(callback, state)
+                    if not ok then
+                        warn("[UILibrary] Erro no callback do toggle '" .. tostring(text) .. "': " .. tostring(err))
+                    end
+                end
             end
 
             switch.MouseButton1Click:Connect(function()
@@ -670,9 +678,20 @@ end
                 if callback then callback(state) end
             end)
 
-            -- Aplica o valor salvo ao script também.
-            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
-                task.defer(callback, state)
+            -- Sincroniza o estado inicial com a lógica do script.
+            -- Isso também é necessário quando o controle começa ligado por default
+            -- ou quando o estado veio de um perfil salvo.
+            if callback then
+                local initialState = state
+                task.defer(function()
+                    -- Não sobrescreve um estado que o usuário já tenha alterado.
+                    if state == initialState then
+                        local ok, err = pcall(callback, initialState)
+                        if not ok then
+                            warn("[UILibrary] Erro ao inicializar toggle '" .. tostring(text) .. "': " .. tostring(err))
+                        end
+                    end
+                end)
             end
         end
 
