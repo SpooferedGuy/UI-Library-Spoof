@@ -49,7 +49,6 @@ local DEFAULT_CONFIG = {
     -- Defina loadSaveConfig = true no userConfig para ativar.
     loadSaveConfig = false,
     AutoLoadLastConfig = false,
-    AutoLoadDelay = 3,
 }
 
 local function carregarIcone(url, fileName)
@@ -247,21 +246,11 @@ local function Build(userConfig)
 
         ApplyingProfile = true
         SavedConfig = cloneConfig(profile)
-
-        -- Aplica os valores do perfil aos controles existentes. Um toggle
-        -- ausente no perfil é considerado false, não herdando estado antigo.
-        for key, setter in pairs(ControlRegistry) do
-            local value = profile[key]
-            if value == nil and string.sub(key, 1, 7) == "Toggle_" then
-                value = false
-            end
-
-            if value ~= nil then
-                RuntimeConfig[key] = value
-                local ok, err = pcall(setter, value)
-                if not ok then
-                    warn("[UILibrary] Erro ao aplicar configuração em '" .. tostring(key) .. "': " .. tostring(err))
-                end
+        for key, value in pairs(profile) do
+            RuntimeConfig[key] = value
+            local setter = ControlRegistry[key]
+            if setter then
+                setter(value)
             end
         end
         ApplyingProfile = false
@@ -282,9 +271,6 @@ local function Build(userConfig)
     local ScreenGui = new("ScreenGui", {
         Name = CONFIG.ScriptName,
         ResetOnSpawn = false,
-        DisplayOrder = 1000000,
-        -- Sibling é importante aqui: Global pode colocar filhos atrás do Main,
-        -- já que muitos elementos usam ZIndex padrão.
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         IgnoreGuiInset = true,
         Parent = playerGui,
@@ -638,10 +624,7 @@ end
 
         function API.AddToggle(text, default, callback)
             local configKey = "Toggle_" .. tostring(text)
-            local fallbackState = type(default) == "boolean" and default or false
-            local savedState = SavedConfig[configKey]
-            local state = type(savedState) == "boolean" and savedState or fallbackState
-            if savedState == false then state = false end
+            local state = getSaved(configKey, default or false) == true
             local frame = new("Frame", {
                 Parent = page, Size = UDim2.new(1, 0, 0, 30),
                 BackgroundColor3 = THEME.Secondary, BorderSizePixel = 0,
@@ -669,20 +652,10 @@ end
 
             RuntimeConfig[configKey] = state
             ControlRegistry[configKey] = function(newValue)
-                -- Apenas booleanos explícitos são aceitos. Valores ausentes ou
-                -- inválidos não podem transformar um toggle em ligado.
-                if type(newValue) ~= "boolean" then
-                    return
-                end
-                state = newValue
+                state = newValue == true
                 switch.BackgroundColor3 = state and THEME.Accent or THEME.Tertiary
                 knob.Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.fromOffset(3, 3)
-                if callback then
-                    local ok, err = pcall(callback, state)
-                    if not ok then
-                        warn("[UILibrary] Erro no callback do toggle '" .. tostring(text) .. "': " .. tostring(err))
-                    end
-                end
+                if callback then callback(state) end
             end
 
             switch.MouseButton1Click:Connect(function()
@@ -694,32 +667,12 @@ end
                     Position = state and UDim2.new(1, -17, 0.5, -7) or UDim2.fromOffset(3, 3)
                 })
                 saveValue(configKey, state)
-                if callback then
-                    local ok, err = pcall(callback, state)
-                    if not ok then
-                        warn("[UILibrary] Erro no callback do toggle '" .. tostring(text) .. "': " .. tostring(err))
-                    end
-                end
+                if callback then callback(state) end
             end)
 
-            -- Só aplica automaticamente o estado quando ele veio de uma
-            -- configuração salva. Toggles novos/defaults não devem iniciar
-            -- scripts por conta própria ao abrir a GUI.
-            local validAutoLoadProfile = ProfileData.AutoLoad
-                and ProfileData.LastSelected ~= ""
-                and type(ProfileData.Profiles[ProfileData.LastSelected]) == "table"
-
-            if CONFIG.loadSaveConfig and not validAutoLoadProfile
-                and SavedConfig[configKey] ~= nil and callback then
-                local initialState = state
-                task.defer(function()
-                    if state == initialState then
-                        local ok, err = pcall(callback, initialState)
-                        if not ok then
-                            warn("[UILibrary] Erro ao inicializar toggle '" .. tostring(text) .. "': " .. tostring(err))
-                        end
-                    end
-                end)
+            -- Aplica o valor salvo ao script também.
+            if CONFIG.loadSaveConfig and SavedConfig[configKey] ~= nil and callback then
+                task.defer(callback, state)
             end
         end
 
@@ -1117,18 +1070,11 @@ function API.AddSlider(text, min, max, default, callback)
         refreshProfileList()
     end)
 
-if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
-    local delay = tonumber(CONFIG.AutoLoadDelay) or 3
-    task.delay(delay, function()
-        -- Revalida, porque o usuário pode ter desligado o AutoLoad
-        -- ou deletado o perfil durante a espera.
-        if ProfileData.AutoLoad
-            and selectedProfile ~= ""
-            and ProfileData.Profiles[selectedProfile] then
+    if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
+        task.defer(function()
             applyProfile(selectedProfile)
-        end
-    end)
-end
+        end)
+    end
 
     SettingsBtn.MouseButton1Click:Connect(function()
         for _, t in ipairs(Tabs) do
