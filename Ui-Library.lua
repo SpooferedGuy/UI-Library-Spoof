@@ -334,9 +334,11 @@ local function Build(userConfig)
 
     --==============================================
     -- ORBE (imagem orbitando o botão)
-    --  - O pivô gira; o ícone fica SEMPRE em pé (Rotation compensada)
-    --  - Loop só roda quando necessário (pausa com UI fechada)
-    --  - Sem RenderStepped fixo; sync só durante o drag
+    --  - O pivô NÃO gira; o ícone é posicionado em coordenadas polares.
+    --  - O ícone permanece sempre em pé (Rotation = 0).
+    --  - Loop roda SEMPRE, independente da UI aberta/fechada.
+    --  - Otimizações: Heartbeat, só atualiza com mudança >= 0.5°,
+    --    sync de posição só no drag.
     --==============================================
     local OrbitController = nil
     if CONFIG.OrbitImage and CONFIG.OrbitEnabled ~= false then
@@ -356,9 +358,6 @@ local function Build(userConfig)
             ClipsDescendants = false,
         })
 
-        -- O ícone é filho do pivô, mas em vez de aplicar Rotation nele
-        -- via propriedade (que giraria junto), posicionamos manualmente
-        -- em coordenadas polares a cada frame e mantemos Rotation = 0.
         local orbitIcon = new("ImageLabel", {
             Parent = orbitPivot,
             Size = UDim2.fromOffset(iconSize, iconSize),
@@ -379,42 +378,25 @@ local function Build(userConfig)
         end
         syncOrbit()
 
-        -- Atualiza posição do ícone em coordenadas polares.
-        -- O pivô NÃO gira (Rotation = 0 sempre); só o ícone se move.
-        -- Assim o ícone orbita mas permanece em pé.
         local angle = 0
-        local active = true
         local connection
         local lastAppliedAngle = -1
 
         local function updateIconPosition()
-            -- centro do pivô em escala 0..1
-            local cx, cy = 0.5, 0.5
-            -- raio em pixels -> convertido para offset, já que o pivô tem tamanho fixo
-            local px = orbitPivot.AbsoluteSize.X * cx + math.cos(math.rad(angle)) * radius
-            local py = orbitPivot.AbsoluteSize.Y * cy + math.sin(math.rad(angle)) * radius
-            -- Position em offset relativo ao canto do pivô
+            local px = orbitPivot.AbsoluteSize.X * 0.5 + math.cos(math.rad(angle)) * radius
+            local py = orbitPivot.AbsoluteSize.Y * 0.5 + math.sin(math.rad(angle)) * radius
             orbitIcon.Position = UDim2.fromOffset(px, py)
-            orbitIcon.Rotation = 0 -- sempre em pé
+            orbitIcon.Rotation = 0
         end
 
         local function startLoop()
             if connection then return end
             connection = RunService.Heartbeat:Connect(function(dt)
-                if not active then return end
                 angle = (angle + (360 / speed) * dt) % 360
-                -- Só atualiza se o ângulo mudou o suficiente (economia)
                 if math.abs(angle - lastAppliedAngle) < 0.5 then return end
                 lastAppliedAngle = angle
                 updateIconPosition()
             end)
-        end
-
-        local function stopLoop()
-            if connection then
-                connection:Disconnect()
-                connection = nil
-            end
         end
 
         updateIconPosition()
@@ -422,10 +404,11 @@ local function Build(userConfig)
 
         OrbitController = {
             sync = syncOrbit,
-            pause = function() active = false end,
-            resume = function() active = true end,
             destroy = function()
-                stopLoop()
+                if connection then
+                    connection:Disconnect()
+                    connection = nil
+                end
                 if orbitPivot then orbitPivot:Destroy() end
             end,
         }
@@ -559,15 +542,7 @@ local function Build(userConfig)
                 end
             end)
         end
-
-        -- Pausa/retoma a órbita conforme a UI abre/fecha
-        if OrbitController then
-            if Open then
-                OrbitController.resume()
-            else
-                OrbitController.pause()
-            end
-        end
+        -- A órbita NÃO é pausada aqui: continua girando sempre.
     end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
@@ -590,7 +565,6 @@ local function Build(userConfig)
                 ToggleButton.Position = UDim2.new(
                     startPos.X.Scale, startPos.X.Offset + delta.X,
                     startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                -- Sincroniza a órbita apenas durante o arrasto
                 if OrbitController then
                     OrbitController.sync()
                 end
