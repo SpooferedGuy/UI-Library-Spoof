@@ -32,6 +32,7 @@ local DEFAULT_CONFIG = {
     OrbitImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image3.png",
     OrbitEnabled = true,
     OrbitRadius = 43,
+    OrbitOffsetX = -12, -- desloca o centro da órbita 12 pixels para a esquerda
     OrbitSpeed = 3,
     OrbitIconSize = 35,
     Width = 520,
@@ -321,7 +322,7 @@ local function Build(userConfig)
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
         Size = UDim2.fromOffset(74, 72),
-        Position = UDim2.new(0, 20, 0.5, -30),
+        Position = UDim2.new(0, 20, 0.5, -40),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Image = CONFIG.IconImage,
@@ -343,6 +344,7 @@ local function Build(userConfig)
     local OrbitController = nil
     if CONFIG.OrbitImage and CONFIG.OrbitEnabled ~= false then
         local radius = tonumber(CONFIG.OrbitRadius) or 60
+        local orbitOffsetX = tonumber(CONFIG.OrbitOffsetX) or 0
         local iconSize = tonumber(CONFIG.OrbitIconSize) or 28
         local speed = tonumber(CONFIG.OrbitSpeed) or 3
         if speed <= 0 then speed = 3 end
@@ -383,7 +385,7 @@ local orbitIcon = new("ImageLabel", {
         local lastAppliedAngle = -1
 
         local function updateIconPosition()
-            local px = orbitPivot.AbsoluteSize.X * 0.5 + math.cos(math.rad(angle)) * radius
+            local px = orbitPivot.AbsoluteSize.X * 0.5 + orbitOffsetX + math.cos(math.rad(angle)) * radius
             local py = orbitPivot.AbsoluteSize.Y * 0.5 + math.sin(math.rad(angle)) * radius
             orbitIcon.Position = UDim2.fromOffset(px, py)
             orbitIcon.Rotation = 0
