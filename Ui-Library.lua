@@ -347,30 +347,30 @@ local function Build(userConfig)
         local speed = tonumber(CONFIG.OrbitSpeed) or 3
         if speed <= 0 then speed = 3 end
 
-        local orbitPivot = new("Frame", {
-            Parent = ScreenGui,
-            Size = ToggleButton.Size,
-            Position = ToggleButton.Position,
-            AnchorPoint = Vector2.new(0, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 99,
-            ClipsDescendants = false,
-        })
+local orbitPivot = new("Frame", {
+    Parent = ScreenGui,
+    Size = ToggleButton.Size,
+    Position = ToggleButton.Position,
+    AnchorPoint = Vector2.new(0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 102,          -- ← era 99, agora 102 (acima do botão = 100)
+    ClipsDescendants = false,
+})
 
-        local orbitIcon = new("ImageLabel", {
-            Parent = orbitPivot,
-            Size = UDim2.fromOffset(iconSize, iconSize),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, -radius),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Image = CONFIG.OrbitImage,
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-            ImageTransparency = 0,
-            ScaleType = Enum.ScaleType.Fit,
-            ZIndex = 101,
-        })
+local orbitIcon = new("ImageLabel", {
+    Parent = orbitPivot,
+    Size = UDim2.fromOffset(iconSize, iconSize),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.5, -radius),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    Image = CONFIG.OrbitImage,
+    ImageColor3 = Color3.fromRGB(255, 255, 255),
+    ImageTransparency = 0,
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 103,          -- ← era 101, agora 103 (acima do pivô)
+})
 
         local function syncOrbit()
             orbitPivot.Position = ToggleButton.Position
