@@ -26,7 +26,7 @@ ensureFolder()
 local DEFAULT_CONFIG = {
     Title = "UI Library",
     ScriptName = "CustomUILibrary",
-    IconImage = "https://plain-enam-prod-public.komododecks.com/202609/25/Ll3LoZyPiyuIrr6s4hw5/image.png",
+    IconImage = "https://github.com/SpooferedGuy/UI-Library-Spoof/blob/main/image.png",
     -- ADICIONE ESTA LINHA ABAIXO (coloque o link da sua imagem transparente):
     BackgroundImage = "https://plain-enam-prod-public.komododecks.com/202610/04/T65YZWSPkCEfErPaFZ2g/image.png", 
     Width = 520,
