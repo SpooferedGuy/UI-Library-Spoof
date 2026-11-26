@@ -8,7 +8,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 --==============================================
 -- PASTA DA LIBRARY
 --==============================================
-local LIBRARY_FOLDER = "Spoof-Hub" -- Nome da pasta (mude se quiser)
+local LIBRARY_FOLDER = "Spoof-Hub"
 
 local function ensureFolder()
     if type(makefolder) == "function" and type(isfolder) == "function" then
@@ -26,9 +26,8 @@ ensureFolder()
 local DEFAULT_CONFIG = {
     Title = "UI Library",
     ScriptName = "CustomUILibrary",
-    IconImage = "https://github.com/SpooferedGuy/UI-Library-Spoof/blob/main/image.png",
-    -- ADICIONE ESTA LINHA ABAIXO (coloque o link da sua imagem transparente):
-    BackgroundImage = "https://plain-enam-prod-public.komododecks.com/202610/04/T65YZWSPkCEfErPaFZ2g/image.png", 
+    IconImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image.png",
+    BackgroundImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image2.png",
     Width = 520,
     Height = 300,
 
@@ -45,27 +44,67 @@ local DEFAULT_CONFIG = {
     Font = Enum.Font.GothamMedium,
     FontBold = Enum.Font.GothamBold,
 
-    -- Salva/carrega automaticamente os estados dos controles.
-    -- Defina loadSaveConfig = true no userConfig para ativar.
     loadSaveConfig = false,
     AutoLoadLastConfig = false,
     AutoLoadDelay = 3,
 }
 
+--==============================================
+-- CONVERSÃO DE URL DO GITHUB -> RAW
+--==============================================
+local function toRawGithubUrl(url)
+    if type(url) ~= "string" then return url end
+
+    -- github.com/USER/REPO/blob/BRANCH/PATH -> raw.githubusercontent.com/USER/REPO/BRANCH/PATH
+    local user, repo, branch, path = url:match(
+        "^https?://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$"
+    )
+    if user and repo and branch and path then
+        return "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/" .. branch .. "/" .. path
+    end
+
+    -- github.com/USER/REPO/raw/BRANCH/PATH -> raw.githubusercontent.com/USER/REPO/BRANCH/PATH
+    local u2, r2, b2, p2 = url:match(
+        "^https?://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.+)$"
+    )
+    if u2 and r2 and b2 and p2 then
+        return "https://raw.githubusercontent.com/" .. u2 .. "/" .. r2 .. "/" .. b2 .. "/" .. p2
+    end
+
+    -- Se já for raw.githubusercontent.com ou outro link, mantém
+    return url
+end
+
 local function carregarIcone(url, fileName)
-    fileName = fileName or "ui_icon.png" 
-    
-    -- Adiciona a pasta ao caminho do arquivo
+    if type(url) ~= "string" or url == "" then
+        return nil
+    end
+
+    fileName = fileName or "ui_icon.png"
     local fullPath = LIBRARY_FOLDER .. "/" .. fileName
-    
+
+    -- Converte links do github.com (blob/raw) para raw.githubusercontent.com
+    local rawUrl = toRawGithubUrl(url)
+
+    -- Tenta baixar; se o arquivo já existir e for válido, tenta reutilizar
     local ok, resultado = pcall(function()
-        local dados = game:HttpGet(url)
+        local dados = game:HttpGet(rawUrl)
+        if type(dados) ~= "string" or #dados == 0 then
+            error("Download vazio: " .. tostring(rawUrl))
+        end
+        -- Verifica se não veio HTML de página de erro (ex: 404 do GitHub)
+        if dados:sub(1, 1) == "<" then
+            error("Resposta não é uma imagem (HTML): " .. tostring(rawUrl))
+        end
+        ensureFolder()
         writefile(fullPath, dados)
         return getcustomasset(fullPath)
     end)
-    if ok then
+
+    if ok and resultado then
         return resultado
     else
+        warn("[UILibrary] Falha ao carregar imagem: " .. tostring(rawUrl) .. " -> " .. tostring(resultado))
         return nil
     end
 end
@@ -145,7 +184,7 @@ end
 local function getConfigFileName(config)
     local safeName = tostring(config.ScriptName or "CustomUILibrary")
         :gsub("[^%w_%-]", "_")
-    return LIBRARY_FOLDER .. "/" .. safeName .. "_config.json" -- ADICIONADO A PASTA
+    return LIBRARY_FOLDER .. "/" .. safeName .. "_config.json"
 end
 
 local function canUseFileApi()
@@ -156,21 +195,16 @@ end
 
 local function loadSavedConfig(fileName)
     if not canUseFileApi() then return {} end
-    
-    -- Verifica se a pasta existe (segurança)
     if type(isfolder) == "function" and not isfolder(LIBRARY_FOLDER) then
         return {}
     end
-    
     if not isfile(fileName) then
         return {}
     end
-
     local ok, content = pcall(readfile, fileName)
     if not ok or type(content) ~= "string" or content == "" then
         return {}
     end
-
     local decoded = jsonDecode(content)
     return type(decoded) == "table" and decoded or {}
 end
@@ -179,15 +213,11 @@ local function saveConfig(fileName, data)
     if not canUseFileApi() then
         return false
     end
-    
-    -- Garante que a pasta existe antes de salvar
     ensureFolder()
-
     local encoded = jsonEncode(data)
     if not encoded then
         return false
     end
-
     return pcall(writefile, fileName, encoded)
 end
 
@@ -248,14 +278,11 @@ local function Build(userConfig)
         ApplyingProfile = true
         SavedConfig = cloneConfig(profile)
 
-        -- Aplica os valores do perfil aos controles existentes. Um toggle
-        -- ausente no perfil é considerado false, não herdando estado antigo.
         for key, setter in pairs(ControlRegistry) do
             local value = profile[key]
             if value == nil and string.sub(key, 1, 7) == "Toggle_" then
                 value = false
             end
-
             if value ~= nil then
                 RuntimeConfig[key] = value
                 local ok, err = pcall(setter, value)
@@ -283,19 +310,19 @@ local function Build(userConfig)
         Name = CONFIG.ScriptName,
         ResetOnSpawn = false,
         DisplayOrder = 1000000,
-        -- Sibling é importante aqui: Global pode colocar filhos atrás do Main,
-        -- já que muitos elementos usam ZIndex padrão.
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         IgnoreGuiInset = true,
         Parent = playerGui,
     })
 
-    -- Botão flutuante
+    --==============================================
+    -- BOTÃO FLUTUANTE (MAIOR, SEM FUNDO, SÓ IMAGEM)
+    --==============================================
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(50, 50),
-        Position = UDim2.new(0, 20, 0.5, -25),
-        BackgroundColor3 = THEME.Accent,
+        Size = UDim2.fromOffset(80, 80),
+        Position = UDim2.new(0, 20, 0.5, -40),
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Image = CONFIG.IconImage,
         ImageColor3 = Color3.fromRGB(255, 255, 255),
@@ -303,8 +330,6 @@ local function Build(userConfig)
         AutoButtonColor = false,
         ZIndex = 100,
     })
-    corner(ToggleButton, 12); padding(ToggleButton, 8)
-    stroke(ToggleButton, THEME.Accent, 1.5)
 
     -- Janela
     local Main = new("Frame", {
@@ -340,7 +365,7 @@ local function Build(userConfig)
         TextXAlignment = Enum.TextXAlignment.Left,
     })
 
-local CloseBtn = new("TextButton", {
+    local CloseBtn = new("TextButton", {
         Parent = Topbar,
         Size = UDim2.fromOffset(24, 24),
         Position = UDim2.new(1, -30, 0, 4),
@@ -391,64 +416,55 @@ local CloseBtn = new("TextButton", {
     new("UIListLayout", { Parent = Sidebar, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
 
     local Container = new("Frame", {
-    Parent = Main,
-    Size = UDim2.new(1, -130, 1, -32),
-    Position = UDim2.fromOffset(130, 32),
-    BackgroundTransparency = 1,
-    ZIndex = 0, -- ADICIONE ISSO: Garante que o container base é a camada 0
-})
-
-if CONFIG.BackgroundImage then
-    local BgImage = new("ImageLabel", {
-        Parent = Container, 
-        
-        -- TESTE: Use um tamanho fixo GRANDE para ver se funciona
-        Size = UDim2.fromOffset(500, 300), -- 600px de largura, 300px de altura
-        
-        -- Posição: começa na esquerda, mas se for maior que o Container, vai vazar
-        Position = UDim2.fromOffset(0.5, 0),
-        
-        BackgroundTransparency = 1, 
-        Image = CONFIG.BackgroundImage,
-        ImageTransparency = 0.7, 
-        
-        -- MUDANÇA IMPORTANTE: Stretch para esticar de verdade
-        ScaleType = Enum.ScaleType.Stretch, 
-        
-        ZIndex = 10, 
-        Active = false, 
+        Parent = Main,
+        Size = UDim2.new(1, -130, 1, -32),
+        Position = UDim2.fromOffset(130, 32),
+        BackgroundTransparency = 1,
+        ZIndex = 0,
     })
-end
+
+    if CONFIG.BackgroundImage then
+        new("ImageLabel", {
+            Parent = Container,
+            Size = UDim2.fromOffset(500, 300),
+            Position = UDim2.fromOffset(0.5, 0),
+            BackgroundTransparency = 1,
+            Image = CONFIG.BackgroundImage,
+            ImageTransparency = 0.7,
+            ScaleType = Enum.ScaleType.Stretch,
+            ZIndex = 10,
+            Active = false,
+        })
+    end
 
     --==============================================
     -- Toggle
     --==============================================
     local Open = true
     local function toggleUI()
-    Open = not Open
-    local targetSize = Open and UDim2.fromOffset(CONFIG.Width, CONFIG.Height) or UDim2.fromOffset(0, 0)
-    local targetPos = Open
-        and UDim2.new(0.5, -CONFIG.Width/2, 0.5, -CONFIG.Height/2)
-        or UDim2.new(0.5, 0, 0.5, 0)
+        Open = not Open
+        local targetSize = Open and UDim2.fromOffset(CONFIG.Width, CONFIG.Height) or UDim2.fromOffset(0, 0)
+        local targetPos = Open
+            and UDim2.new(0.5, -CONFIG.Width/2, 0.5, -CONFIG.Height/2)
+            or UDim2.new(0.5, 0, 0.5, 0)
 
-    if Open then
-        -- Abrindo: mostra antes de animar
-        Main.Visible = true
-        tween(Main, 0.25, { Size = targetSize, Position = targetPos })
-    else
-        -- Fechando: anima e SÓ DEPOIS esconde
-        tween(Main, 0.25, { Size = targetSize, Position = targetPos })
-        task.delay(0.26, function()
-            if not Open then
-                Main.Visible = false
-            end
-        end)
+        if Open then
+            Main.Visible = true
+            tween(Main, 0.25, { Size = targetSize, Position = targetPos })
+        else
+            tween(Main, 0.25, { Size = targetSize, Position = targetPos })
+            task.delay(0.26, function()
+                if not Open then
+                    Main.Visible = false
+                end
+            end)
+        end
+
+        -- Fade suave no ícone quando a UI abre/fecha (sem mudar fundo, pois é transparente)
+        tween(ToggleButton, 0.2, {
+            ImageTransparency = Open and 0 or 0.25
+        })
     end
-
-    tween(ToggleButton, 0.2, {
-        BackgroundColor3 = Open and THEME.Accent or THEME.Secondary
-    })
-end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
     -- Drag botão flutuante
@@ -669,8 +685,6 @@ end
 
             RuntimeConfig[configKey] = state
             ControlRegistry[configKey] = function(newValue)
-                -- Apenas booleanos explícitos são aceitos. Valores ausentes ou
-                -- inválidos não podem transformar um toggle em ligado.
                 if type(newValue) ~= "boolean" then
                     return
                 end
@@ -702,9 +716,6 @@ end
                 end
             end)
 
-            -- Só aplica automaticamente o estado quando ele veio de uma
-            -- configuração salva. Toggles novos/defaults não devem iniciar
-            -- scripts por conta própria ao abrir a GUI.
             local validAutoLoadProfile = ProfileData.AutoLoad
                 and ProfileData.LastSelected ~= ""
                 and type(ProfileData.Profiles[ProfileData.LastSelected]) == "table"
@@ -763,7 +774,7 @@ end
             return box
         end
 
-function API.AddSlider(text, min, max, default, callback)
+        function API.AddSlider(text, min, max, default, callback)
             min, max = min or 0, max or 100
             local configKey = "Slider_" .. tostring(text)
             local value = tonumber(getSaved(configKey, default or min)) or (default or min)
@@ -1117,18 +1128,16 @@ function API.AddSlider(text, min, max, default, callback)
         refreshProfileList()
     end)
 
-if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
-    local delay = tonumber(CONFIG.AutoLoadDelay) or 3
-    task.delay(delay, function()
-        -- Revalida, porque o usuário pode ter desligado o AutoLoad
-        -- ou deletado o perfil durante a espera.
-        if ProfileData.AutoLoad
-            and selectedProfile ~= ""
-            and ProfileData.Profiles[selectedProfile] then
-            applyProfile(selectedProfile)
-        end
-    end)
-end
+    if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
+        local delay = tonumber(CONFIG.AutoLoadDelay) or 3
+        task.delay(delay, function()
+            if ProfileData.AutoLoad
+                and selectedProfile ~= ""
+                and ProfileData.Profiles[selectedProfile] then
+                applyProfile(selectedProfile)
+            end
+        end)
+    end
 
     SettingsBtn.MouseButton1Click:Connect(function()
         for _, t in ipairs(Tabs) do
@@ -1145,7 +1154,6 @@ end
         Main = Main,
         ToggleButton = ToggleButton,
 
-        -- Persistência opcional
         ConfigFileName = ConfigFileName,
         ProfileFileName = ProfileFileName,
         SaveConfig = function()
