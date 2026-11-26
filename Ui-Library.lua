@@ -561,7 +561,7 @@ local orbitIcon = new("ImageLabel", {
         local touchMovedTooSoon = false
         local touchDragging = false
         local touchToken = 0
-        local TOUCH_DRAG_HOLD = 0.05
+        local TOUCH_DRAG_HOLD = 0.002
         local TOUCH_MOVE_CANCEL = 14
 
         local function moveButton(delta, origin)
