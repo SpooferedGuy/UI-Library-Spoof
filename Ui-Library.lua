@@ -1,5 +1,6 @@
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
@@ -29,9 +30,10 @@ local DEFAULT_CONFIG = {
     IconImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image.png",
     BackgroundImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image2.png",
     OrbitImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image3.png",
-    OrbitRadius = 60,        -- raio da órbita (distância do centro do botão até o ícone)
-    OrbitSpeed = 3,          -- segundos por volta completa
-    OrbitIconSize = 28,      -- tamanho do ícone que orbita
+    OrbitEnabled = true,
+    OrbitRadius = 60,
+    OrbitSpeed = 3,
+    OrbitIconSize = 28,
     Width = 520,
     Height = 300,
 
@@ -332,20 +334,21 @@ local function Build(userConfig)
 
     --==============================================
     -- ORBE (imagem orbitando o botão)
+    --  - O pivô gira; o ícone fica SEMPRE em pé (Rotation compensada)
+    --  - Loop só roda quando necessário (pausa com UI fechada)
+    --  - Sem RenderStepped fixo; sync só durante o drag
     --==============================================
-    if CONFIG.OrbitImage then
+    local OrbitController = nil
+    if CONFIG.OrbitImage and CONFIG.OrbitEnabled ~= false then
         local radius = tonumber(CONFIG.OrbitRadius) or 60
         local iconSize = tonumber(CONFIG.OrbitIconSize) or 28
         local speed = tonumber(CONFIG.OrbitSpeed) or 3
         if speed <= 0 then speed = 3 end
 
-        -- Pivô invisível do tamanho do botão, posicionado no mesmo lugar que ele.
-        -- Vamos girar o pivô; o ImageLabel fica na borda superior, então
-        -- ao girar o pivô o ícone descreve um círculo ao redor do centro.
         local orbitPivot = new("Frame", {
             Parent = ScreenGui,
-            Size = UDim2.fromOffset(80, 80),
-            Position = UDim2.new(0, 20, 0.5, -40),
+            Size = ToggleButton.Size,
+            Position = ToggleButton.Position,
             AnchorPoint = Vector2.new(0, 0),
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -353,8 +356,9 @@ local function Build(userConfig)
             ClipsDescendants = false,
         })
 
-        -- O ícone fica no "topo" do pivô, mas deslocado para fora pelo raio.
-        -- Ele mesmo não gira (Rotation = 0) para não ficar de cabeça pra baixo.
+        -- O ícone é filho do pivô, mas em vez de aplicar Rotation nele
+        -- via propriedade (que giraria junto), posicionamos manualmente
+        -- em coordenadas polares a cada frame e mantemos Rotation = 0.
         local orbitIcon = new("ImageLabel", {
             Parent = orbitPivot,
             Size = UDim2.fromOffset(iconSize, iconSize),
@@ -369,27 +373,62 @@ local function Build(userConfig)
             ZIndex = 101,
         })
 
-        -- Mantém o pivô acompanhando o botão quando ele é arrastado.
-        local function syncOrbitToButton()
+        local function syncOrbit()
             orbitPivot.Position = ToggleButton.Position
             orbitPivot.Size = ToggleButton.Size
         end
+        syncOrbit()
 
-        -- Sincroniza a cada frame (leve, só 1 conexão) para seguir o drag.
-        game:GetService("RunService").RenderStepped:Connect(function()
-            if orbitPivot.Parent then
-                syncOrbitToButton()
+        -- Atualiza posição do ícone em coordenadas polares.
+        -- O pivô NÃO gira (Rotation = 0 sempre); só o ícone se move.
+        -- Assim o ícone orbita mas permanece em pé.
+        local angle = 0
+        local active = true
+        local connection
+        local lastAppliedAngle = -1
+
+        local function updateIconPosition()
+            -- centro do pivô em escala 0..1
+            local cx, cy = 0.5, 0.5
+            -- raio em pixels -> convertido para offset, já que o pivô tem tamanho fixo
+            local px = orbitPivot.AbsoluteSize.X * cx + math.cos(math.rad(angle)) * radius
+            local py = orbitPivot.AbsoluteSize.Y * cy + math.sin(math.rad(angle)) * radius
+            -- Position em offset relativo ao canto do pivô
+            orbitIcon.Position = UDim2.fromOffset(px, py)
+            orbitIcon.Rotation = 0 -- sempre em pé
+        end
+
+        local function startLoop()
+            if connection then return end
+            connection = RunService.Heartbeat:Connect(function(dt)
+                if not active then return end
+                angle = (angle + (360 / speed) * dt) % 360
+                -- Só atualiza se o ângulo mudou o suficiente (economia)
+                if math.abs(angle - lastAppliedAngle) < 0.5 then return end
+                lastAppliedAngle = angle
+                updateIconPosition()
+            end)
+        end
+
+        local function stopLoop()
+            if connection then
+                connection:Disconnect()
+                connection = nil
             end
-        end)
+        end
 
-        -- Gira o pivô continuamente. Usamos Rotation do pivô, que é um Frame.
-        -- Nota: Frame tem Rotation; isso gira os filhos ao redor do centro do pivô.
-        local spinTween = TweenService:Create(
-            orbitPivot,
-            TweenInfo.new(speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
-            { Rotation = 360 }
-        )
-        spinTween:Play()
+        updateIconPosition()
+        startLoop()
+
+        OrbitController = {
+            sync = syncOrbit,
+            pause = function() active = false end,
+            resume = function() active = true end,
+            destroy = function()
+                stopLoop()
+                if orbitPivot then orbitPivot:Destroy() end
+            end,
+        }
     end
 
     -- Janela
@@ -520,6 +559,15 @@ local function Build(userConfig)
                 end
             end)
         end
+
+        -- Pausa/retoma a órbita conforme a UI abre/fecha
+        if OrbitController then
+            if Open then
+                OrbitController.resume()
+            else
+                OrbitController.pause()
+            end
+        end
     end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
@@ -542,6 +590,10 @@ local function Build(userConfig)
                 ToggleButton.Position = UDim2.new(
                     startPos.X.Scale, startPos.X.Offset + delta.X,
                     startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                -- Sincroniza a órbita apenas durante o arrasto
+                if OrbitController then
+                    OrbitController.sync()
+                end
             end
         end)
         UserInputService.InputEnded:Connect(function(input)
@@ -549,6 +601,9 @@ local function Build(userConfig)
                 or input.UserInputType == Enum.UserInputType.Touch then
                 if dragging and not moved then toggleUI() end
                 dragging = false
+                if OrbitController then
+                    OrbitController.sync()
+                end
             end
         end)
     end
