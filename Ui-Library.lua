@@ -549,56 +549,92 @@ local orbitIcon = new("ImageLabel", {
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
     -- Drag botão flutuante
-    -- No celular, o botão apenas responde ao toque; não inicia arrasto.
-    -- No PC, o arrasto continua disponível pelo botão esquerdo do mouse.
+    -- Mouse: arrasto normal.
+    -- Touch: exige pressionar brevemente antes de arrastar; gestos rápidos
+    -- que apenas passam pela GUI não reposicionam o botão.
     do
-        local dragging = false
-        local dragStart, startPos
-        local wasDragged = false
+        local mouseDragging = false
+        local mouseDragStart, mouseStartPos
+        local activeTouch = nil
+        local touchStartPos = nil
+        local touchStartButtonPos = nil
+        local touchMovedTooSoon = false
+        local touchDragging = false
+        local touchToken = 0
+        local TOUCH_DRAG_HOLD = 0.4
+        local TOUCH_MOVE_CANCEL = 14
+
+        local function moveButton(delta, origin)
+            ToggleButton.Position = UDim2.new(
+                origin.X.Scale, origin.X.Offset + delta.X,
+                origin.Y.Scale, origin.Y.Offset + delta.Y
+            )
+            if OrbitController then
+                OrbitController.sync()
+            end
+        end
 
         ToggleButton.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = true
-                wasDragged = false
-                dragStart = input.Position
-                startPos = ToggleButton.Position
+                mouseDragging = true
+                mouseDragStart = input.Position
+                mouseStartPos = ToggleButton.Position
+            elseif input.UserInputType == Enum.UserInputType.Touch then
+                touchToken = touchToken + 1
+                local thisToken = touchToken
+                activeTouch = input
+                touchStartPos = input.Position
+                touchStartButtonPos = ToggleButton.Position
+                touchMovedTooSoon = false
+                touchDragging = false
+
+                task.delay(TOUCH_DRAG_HOLD, function()
+                    if activeTouch == input and not touchMovedTooSoon then
+                        touchDragging = true
+                    end
+                end)
             end
         end)
 
         UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local delta = input.Position - dragStart
-                if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
-                    wasDragged = true
+            if mouseDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input.Position - mouseDragStart
+                if math.abs(delta.X) > 0 or math.abs(delta.Y) > 0 then
+                    moveButton(delta, mouseStartPos)
                 end
-
-                if wasDragged then
-                    ToggleButton.Position = UDim2.new(
-                        startPos.X.Scale, startPos.X.Offset + delta.X,
-                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
-                    )
-                    if OrbitController then
-                        OrbitController.sync()
+            elseif activeTouch and input.UserInputType == Enum.UserInputType.Touch then
+                local delta = input.Position - touchStartPos
+                if not touchDragging then
+                    if math.abs(delta.X) > TOUCH_MOVE_CANCEL
+                        or math.abs(delta.Y) > TOUCH_MOVE_CANCEL then
+                        touchMovedTooSoon = true
                     end
+                else
+                    moveButton(delta, touchStartButtonPos)
                 end
             end
         end)
 
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and mouseDragging then
+                mouseDragging = false
+                if OrbitController then
+                    OrbitController.sync()
+                end
+            elseif input.UserInputType == Enum.UserInputType.Touch and activeTouch == input then
+                local shouldToggle = not touchMovedTooSoon and not touchDragging
+                activeTouch = nil
+                touchStartPos = nil
+                touchStartButtonPos = nil
+                touchMovedTooSoon = false
+                touchDragging = false
+                if shouldToggle then
+                    toggleUI()
+                end
                 if OrbitController then
                     OrbitController.sync()
                 end
             end
-        end)
-
-        ToggleButton.Activated:Connect(function()
-            if wasDragged then
-                wasDragged = false
-                return
-            end
-            toggleUI()
         end)
     end
 
