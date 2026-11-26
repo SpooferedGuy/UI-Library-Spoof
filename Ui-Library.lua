@@ -71,7 +71,6 @@ local function toRawGithubUrl(url)
         return "https://raw.githubusercontent.com/" .. u2 .. "/" .. r2 .. "/" .. b2 .. "/" .. p2
     end
 
-    -- Se já for raw.githubusercontent.com ou outro link, mantém
     return url
 end
 
@@ -82,17 +81,13 @@ local function carregarIcone(url, fileName)
 
     fileName = fileName or "ui_icon.png"
     local fullPath = LIBRARY_FOLDER .. "/" .. fileName
-
-    -- Converte links do github.com (blob/raw) para raw.githubusercontent.com
     local rawUrl = toRawGithubUrl(url)
 
-    -- Tenta baixar; se o arquivo já existir e for válido, tenta reutilizar
     local ok, resultado = pcall(function()
         local dados = game:HttpGet(rawUrl)
         if type(dados) ~= "string" or #dados == 0 then
             error("Download vazio: " .. tostring(rawUrl))
         end
-        -- Verifica se não veio HTML de página de erro (ex: 404 do GitHub)
         if dados:sub(1, 1) == "<" then
             error("Resposta não é uma imagem (HTML): " .. tostring(rawUrl))
         end
@@ -320,12 +315,13 @@ local function Build(userConfig)
     --==============================================
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(80, 80),
+        Size = UDim2.fromOffset(70, 70),
         Position = UDim2.new(0, 20, 0.5, -40),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Image = CONFIG.IconImage,
         ImageColor3 = Color3.fromRGB(255, 255, 255),
+        ImageTransparency = 0,
         ScaleType = Enum.ScaleType.Fit,
         AutoButtonColor = false,
         ZIndex = 100,
@@ -459,11 +455,6 @@ local function Build(userConfig)
                 end
             end)
         end
-
-        -- Fade suave no ícone quando a UI abre/fecha (sem mudar fundo, pois é transparente)
-        tween(ToggleButton, 0.2, {
-            ImageTransparency = Open and 0 or 0.25
-        })
     end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
