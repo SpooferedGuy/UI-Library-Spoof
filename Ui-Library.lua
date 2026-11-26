@@ -31,7 +31,7 @@ local DEFAULT_CONFIG = {
     BackgroundImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image2.png",
     OrbitImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image3.png",
     OrbitEnabled = true,
-    OrbitRadius = 40,
+    OrbitRadius = 43,
     OrbitSpeed = 3,
     OrbitIconSize = 35,
     Width = 520,
@@ -321,7 +321,7 @@ local function Build(userConfig)
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
         Size = UDim2.fromOffset(74, 72),
-        Position = UDim2.new(0, 20, 0.5, -40),
+        Position = UDim2.new(0, 20, 0.5, -30),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Image = CONFIG.IconImage,
