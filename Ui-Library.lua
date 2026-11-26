@@ -28,6 +28,10 @@ local DEFAULT_CONFIG = {
     ScriptName = "CustomUILibrary",
     IconImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image.png",
     BackgroundImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image2.png",
+    OrbitImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image3.png",
+    OrbitRadius = 60,        -- raio da órbita (distância do centro do botão até o ícone)
+    OrbitSpeed = 3,          -- segundos por volta completa
+    OrbitIconSize = 28,      -- tamanho do ícone que orbita
     Width = 520,
     Height = 300,
 
@@ -55,7 +59,6 @@ local DEFAULT_CONFIG = {
 local function toRawGithubUrl(url)
     if type(url) ~= "string" then return url end
 
-    -- github.com/USER/REPO/blob/BRANCH/PATH -> raw.githubusercontent.com/USER/REPO/BRANCH/PATH
     local user, repo, branch, path = url:match(
         "^https?://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$"
     )
@@ -63,7 +66,6 @@ local function toRawGithubUrl(url)
         return "https://raw.githubusercontent.com/" .. user .. "/" .. repo .. "/" .. branch .. "/" .. path
     end
 
-    -- github.com/USER/REPO/raw/BRANCH/PATH -> raw.githubusercontent.com/USER/REPO/BRANCH/PATH
     local u2, r2, b2, p2 = url:match(
         "^https?://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.+)$"
     )
@@ -106,6 +108,7 @@ end
 
 DEFAULT_CONFIG.IconImage = carregarIcone(DEFAULT_CONFIG.IconImage, "ui_icon.png")
 DEFAULT_CONFIG.BackgroundImage = carregarIcone(DEFAULT_CONFIG.BackgroundImage, "ui_background.png")
+DEFAULT_CONFIG.OrbitImage = carregarIcone(DEFAULT_CONFIG.OrbitImage, "ui_orbit.png")
 
 --==============================================
 -- UTILITÁRIOS
@@ -315,7 +318,7 @@ local function Build(userConfig)
     --==============================================
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(70, 70),
+        Size = UDim2.fromOffset(80, 80),
         Position = UDim2.new(0, 20, 0.5, -40),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
@@ -326,6 +329,68 @@ local function Build(userConfig)
         AutoButtonColor = false,
         ZIndex = 100,
     })
+
+    --==============================================
+    -- ORBE (imagem orbitando o botão)
+    --==============================================
+    if CONFIG.OrbitImage then
+        local radius = tonumber(CONFIG.OrbitRadius) or 60
+        local iconSize = tonumber(CONFIG.OrbitIconSize) or 28
+        local speed = tonumber(CONFIG.OrbitSpeed) or 3
+        if speed <= 0 then speed = 3 end
+
+        -- Pivô invisível do tamanho do botão, posicionado no mesmo lugar que ele.
+        -- Vamos girar o pivô; o ImageLabel fica na borda superior, então
+        -- ao girar o pivô o ícone descreve um círculo ao redor do centro.
+        local orbitPivot = new("Frame", {
+            Parent = ScreenGui,
+            Size = UDim2.fromOffset(80, 80),
+            Position = UDim2.new(0, 20, 0.5, -40),
+            AnchorPoint = Vector2.new(0, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 99,
+            ClipsDescendants = false,
+        })
+
+        -- O ícone fica no "topo" do pivô, mas deslocado para fora pelo raio.
+        -- Ele mesmo não gira (Rotation = 0) para não ficar de cabeça pra baixo.
+        local orbitIcon = new("ImageLabel", {
+            Parent = orbitPivot,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, -radius),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Image = CONFIG.OrbitImage,
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            ImageTransparency = 0,
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 101,
+        })
+
+        -- Mantém o pivô acompanhando o botão quando ele é arrastado.
+        local function syncOrbitToButton()
+            orbitPivot.Position = ToggleButton.Position
+            orbitPivot.Size = ToggleButton.Size
+        end
+
+        -- Sincroniza a cada frame (leve, só 1 conexão) para seguir o drag.
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if orbitPivot.Parent then
+                syncOrbitToButton()
+            end
+        end)
+
+        -- Gira o pivô continuamente. Usamos Rotation do pivô, que é um Frame.
+        -- Nota: Frame tem Rotation; isso gira os filhos ao redor do centro do pivô.
+        local spinTween = TweenService:Create(
+            orbitPivot,
+            TweenInfo.new(speed, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1),
+            { Rotation = 360 }
+        )
+        spinTween:Play()
+    end
 
     -- Janela
     local Main = new("Frame", {
