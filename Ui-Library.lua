@@ -549,38 +549,56 @@ local orbitIcon = new("ImageLabel", {
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
     -- Drag botão flutuante
+    -- No celular, o botão apenas responde ao toque; não inicia arrasto.
+    -- No PC, o arrasto continua disponível pelo botão esquerdo do mouse.
     do
-        local dragging, dragStart, startPos, moved
+        local dragging = false
+        local dragStart, startPos
+        local wasDragged = false
+
         ToggleButton.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                dragging, moved = true, false
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                wasDragged = false
                 dragStart = input.Position
                 startPos = ToggleButton.Position
             end
         end)
+
         UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-                or input.UserInputType == Enum.UserInputType.Touch) then
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
                 local delta = input.Position - dragStart
-                if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then moved = true end
-                ToggleButton.Position = UDim2.new(
-                    startPos.X.Scale, startPos.X.Offset + delta.X,
-                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                if OrbitController then
-                    OrbitController.sync()
+                if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+                    wasDragged = true
+                end
+
+                if wasDragged then
+                    ToggleButton.Position = UDim2.new(
+                        startPos.X.Scale, startPos.X.Offset + delta.X,
+                        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                    )
+                    if OrbitController then
+                        OrbitController.sync()
+                    end
                 end
             end
         end)
+
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                if dragging and not moved then toggleUI() end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 dragging = false
                 if OrbitController then
                     OrbitController.sync()
                 end
             end
+        end)
+
+        ToggleButton.Activated:Connect(function()
+            if wasDragged then
+                wasDragged = false
+                return
+            end
+            toggleUI()
         end)
     end
 
