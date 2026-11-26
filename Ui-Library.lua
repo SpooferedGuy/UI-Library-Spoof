@@ -33,7 +33,7 @@ local DEFAULT_CONFIG = {
     OrbitEnabled = true,
     OrbitRadius = 40,
     OrbitSpeed = 3,
-    OrbitIconSize = 28,
+    OrbitIconSize = 35,
     Width = 520,
     Height = 300,
 
@@ -320,7 +320,7 @@ local function Build(userConfig)
     --==============================================
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
-        Size = UDim2.fromOffset(70, 70),
+        Size = UDim2.fromOffset(74, 72),
         Position = UDim2.new(0, 20, 0.5, -40),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
