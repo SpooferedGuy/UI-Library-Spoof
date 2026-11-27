@@ -451,56 +451,76 @@ local function Build(userConfig)
         ZIndex = 5,
     })
     corner(Main, 10); stroke(Main, THEME.Stroke, 1)
+
 --==============================================
--- DRAG DA JANELA PRINCIPAL
--- Independente do LockPosition
+-- DRAG DA JANELA PRINCIPAL (CORRIGIDO)
 --==============================================
 
 do
     local dragging = false
-    local dragStart = nil
-    local startPosition = nil
-    local dragInput = nil
+    local dragStart
+    local startPos
+    local dragConnection
 
     Topbar.Active = true
 
     Topbar.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1
+            and input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        -- Não inicia drag sobre os botões
+        local mousePos = input.Position
+        local guiObjects = playerGui:GetGuiObjectsAtPosition(
+            mousePos.X,
+            mousePos.Y
+        )
+
+        for _, obj in ipairs(guiObjects) do
+            if obj == CloseBtn or obj == SettingsBtn
+                or obj:IsDescendantOf(CloseBtn)
+                or obj:IsDescendantOf(SettingsBtn) then
+                return
+            end
+        end
+
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+
+        if dragConnection then
+            dragConnection:Disconnect()
+        end
+
+        dragConnection = UserInputService.InputChanged:Connect(function(changed)
+            if not dragging then return end
+
+            if changed.UserInputType == Enum.UserInputType.MouseMovement
+                or changed.UserInputType == Enum.UserInputType.Touch then
+
+                local delta = changed.Position - dragStart
+
+                Main.Position = UDim2.new(
+                    startPos.X.Scale,
+                    startPos.X.Offset + delta.X,
+                    startPos.Y.Scale,
+                    startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
 
-            dragging = true
-            dragStart = input.Position
-            startPosition = Main.Position
+            dragging = false
 
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    Topbar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (
-            input == dragInput
-            or input.UserInputType == Enum.UserInputType.Touch
-        ) then
-
-            local delta = input.Position - dragStart
-
-            Main.Position = UDim2.new(
-                startPosition.X.Scale,
-                startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale,
-                startPosition.Y.Offset + delta.Y
-            )
+            if dragConnection then
+                dragConnection:Disconnect()
+                dragConnection = nil
+            end
         end
     end)
 end
