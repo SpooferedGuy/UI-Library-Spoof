@@ -32,7 +32,7 @@ local DEFAULT_CONFIG = {
     OrbitImage = "https://raw.githubusercontent.com/SpooferedGuy/UI-Library-Spoof/main/image3.png",
     OrbitEnabled = true,
     OrbitRadius = 43,
-    OrbitOffsetX = -7,
+    OrbitOffsetX = -7, -- desloca o centro da órbita 12 pixels para a esquerda
     OrbitSpeed = 3,
     OrbitIconSize = 45,
     Width = 520,
@@ -317,7 +317,7 @@ local function Build(userConfig)
     })
 
     --==============================================
-    -- BOTÃO FLUTUANTE
+    -- BOTÃO FLUTUANTE (MAIOR, SEM FUNDO, SÓ IMAGEM)
     --==============================================
     local ToggleButton = new("ImageButton", {
         Parent = ScreenGui,
@@ -334,7 +334,12 @@ local function Build(userConfig)
     })
 
     --==============================================
-    -- ORBE (otimizado)
+    -- ORBE (imagem orbitando o botão)
+    --  - O pivô NÃO gira; o ícone é posicionado em coordenadas polares.
+    --  - O ícone permanece sempre em pé (Rotation = 0).
+    --  - Loop roda SEMPRE, independente da UI aberta/fechada.
+    --  - Otimizações: Heartbeat, só atualiza com mudança >= 0.5°,
+    --    sync de posição só no drag.
     --==============================================
     local OrbitController = nil
     if CONFIG.OrbitImage and CONFIG.OrbitEnabled ~= false then
@@ -343,74 +348,57 @@ local function Build(userConfig)
         local iconSize = tonumber(CONFIG.OrbitIconSize) or 28
         local speed = tonumber(CONFIG.OrbitSpeed) or 3
         if speed <= 0 then speed = 3 end
-        local angularSpeed = 360 / speed
 
-        local orbitPivot = new("Frame", {
-            Parent = ScreenGui,
-            Size = ToggleButton.Size,
-            Position = ToggleButton.Position,
-            AnchorPoint = Vector2.new(0, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ZIndex = 102,
-            ClipsDescendants = false,
-        })
+local orbitPivot = new("Frame", {
+    Parent = ScreenGui,
+    Size = ToggleButton.Size,
+    Position = ToggleButton.Position,
+    AnchorPoint = Vector2.new(0, 0),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ZIndex = 102,          -- ← era 99, agora 102 (acima do botão = 100)
+    ClipsDescendants = false,
+})
 
-        local orbitIcon = new("ImageLabel", {
-            Parent = orbitPivot,
-            Size = UDim2.fromOffset(iconSize, iconSize),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, -radius),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Image = CONFIG.OrbitImage,
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-            ImageTransparency = 0,
-            ScaleType = Enum.ScaleType.Fit,
-            ZIndex = 103,
-        })
-
-        -- Cache do centro: só recalcula quando o botão é arrastado
-        local cachedCenterX = 0
-        local cachedCenterY = 0
+local orbitIcon = new("ImageLabel", {
+    Parent = orbitPivot,
+    Size = UDim2.fromOffset(iconSize, iconSize),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.new(0.5, 0, 0.5, -radius),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    Image = CONFIG.OrbitImage,
+    ImageColor3 = Color3.fromRGB(255, 255, 255),
+    ImageTransparency = 0,
+    ScaleType = Enum.ScaleType.Fit,
+    ZIndex = 103,          -- ← era 101, agora 103 (acima do pivô)
+})
 
         local function syncOrbit()
             orbitPivot.Position = ToggleButton.Position
             orbitPivot.Size = ToggleButton.Size
-            cachedCenterX = orbitPivot.AbsoluteSize.X * 0.5 + orbitOffsetX
-            cachedCenterY = orbitPivot.AbsoluteSize.Y * 0.5
         end
         syncOrbit()
 
         local angle = 0
         local connection
         local lastAppliedAngle = -1
-        local visible = true
 
         local function updateIconPosition()
-            local radAngle = math.rad(angle)
-            orbitIcon.Position = UDim2.fromOffset(
-                cachedCenterX + math.cos(radAngle) * radius,
-                cachedCenterY + math.sin(radAngle) * radius
-            )
+            local px = orbitPivot.AbsoluteSize.X * 0.5 + orbitOffsetX + math.cos(math.rad(angle)) * radius
+            local py = orbitPivot.AbsoluteSize.Y * 0.5 + math.sin(math.rad(angle)) * radius
+            orbitIcon.Position = UDim2.fromOffset(px, py)
+            orbitIcon.Rotation = 0
         end
 
         local function startLoop()
             if connection then return end
             connection = RunService.Heartbeat:Connect(function(dt)
-                if not visible then return end
-                angle = (angle + angularSpeed * dt) % 360
+                angle = (angle + (360 / speed) * dt) % 360
                 if math.abs(angle - lastAppliedAngle) < 0.5 then return end
                 lastAppliedAngle = angle
                 updateIconPosition()
             end)
-        end
-
-        local function stopLoop()
-            if connection then
-                connection:Disconnect()
-                connection = nil
-            end
         end
 
         updateIconPosition()
@@ -418,22 +406,11 @@ local function Build(userConfig)
 
         OrbitController = {
             sync = syncOrbit,
-            show = function()
-                if orbitPivot then
-                    orbitPivot.Visible = true
-                    visible = true
-                    startLoop()
-                end
-            end,
-            hide = function()
-                if orbitPivot then
-                    orbitPivot.Visible = false
-                    visible = false
-                    stopLoop()
-                end
-            end,
             destroy = function()
-                stopLoop()
+                if connection then
+                    connection:Disconnect()
+                    connection = nil
+                end
                 if orbitPivot then orbitPivot:Destroy() end
             end,
         }
@@ -546,11 +523,6 @@ local function Build(userConfig)
     end
 
     --==============================================
-    -- Flag de Lock Pos (não persiste no config)
-    --==============================================
-    local LockPosition = false
-
-    --==============================================
     -- Toggle
     --==============================================
     local Open = true
@@ -572,59 +544,73 @@ local function Build(userConfig)
                 end
             end)
         end
+        -- A órbita NÃO é pausada aqui: continua girando sempre.
     end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
---==============================================
--- Drag botão flutuante (conexões só durante o drag)
---==============================================
-do
-    local dragging, dragStart, startPos, moved
-    local inputChangedConn, inputEndedConn
-
-    local function disconnectDrag()
-        if inputChangedConn then inputChangedConn:Disconnect(); inputChangedConn = nil end
-        if inputEndedConn then inputEndedConn:Disconnect(); inputEndedConn = nil end
+    -- Drag botão flutuante
+    do
+        local dragging, dragStart, startPos, moved
+        ToggleButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                dragging, moved = true, false
+                dragStart = input.Position
+                startPos = ToggleButton.Position
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then moved = true end
+                ToggleButton.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                if OrbitController then
+                    OrbitController.sync()
+                end
+            end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                if dragging and not moved then toggleUI() end
+                dragging = false
+                if OrbitController then
+                    OrbitController.sync()
+                end
+            end
+        end)
     end
 
-    ToggleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging, moved = true, false
-            dragStart = input.Position
-            startPos = ToggleButton.Position
-
-            if not inputChangedConn then
-                inputChangedConn = UserInputService.InputChanged:Connect(function(inp)
-                    if not dragging then return end
-                    -- 🔒 Se LockPosition estiver ativo, NÃO move o botão
-                    if LockPosition then return end
-                    if inp.UserInputType == Enum.UserInputType.MouseMovement
-                        or inp.UserInputType == Enum.UserInputType.Touch then
-                        local delta = inp.Position - dragStart
-                        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then moved = true end
-                        ToggleButton.Position = UDim2.new(
-                            startPos.X.Scale, startPos.X.Offset + delta.X,
-                            startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                        if OrbitController then OrbitController.sync() end
-                    end
-                end)
+    -- Drag janela
+    do
+        local dragging, dragStart, startPos
+        Topbar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = Main.Position
             end
-
-            if not inputEndedConn then
-                inputEndedConn = UserInputService.InputEnded:Connect(function(inp)
-                    if inp.UserInputType ~= Enum.UserInputType.MouseButton1
-                        and inp.UserInputType ~= Enum.UserInputType.Touch then return end
-                    if not dragging then return end
-                    -- 🔓 Clique funciona mesmo com LockPosition ativo
-                    if not moved then toggleUI() end
-                    dragging = false
-                    disconnectDrag()
-                end)
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                Main.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
-        end
-    end)
-end
+        end)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+    end
 
     --==============================================
     -- Abas
@@ -1228,26 +1214,6 @@ end
         ProfileSelector.Text = "  No configuration"
         refreshProfileList()
     end)
-
-    --==============================================
-    -- BOTÃO LOCK POS (não persiste no loadSaveConfig)
-    --==============================================
-    local LockButton
-    LockButton = SettingsAPI.AddButton(
-        LockPosition and "Lock Pos: ON" or "Lock Pos: OFF",
-        function()
-            LockPosition = not LockPosition
-            LockButton.Text = LockPosition and "Lock Pos: ON" or "Lock Pos: OFF"
-
-            if OrbitController then
-                if LockPosition then
-                    OrbitController.hide()
-                else
-                    OrbitController.show()
-                end
-            end
-        end
-    )
 
     if ProfileData.AutoLoad and selectedProfile ~= "" and ProfileData.Profiles[selectedProfile] then
         local delay = tonumber(CONFIG.AutoLoadDelay) or 3
