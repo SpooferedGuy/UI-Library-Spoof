@@ -575,82 +575,56 @@ local function Build(userConfig)
     end
     CloseBtn.MouseButton1Click:Connect(toggleUI)
 
-    --==============================================
-    -- Drag botão flutuante (conexões só durante o drag)
-    --==============================================
-    do
-        local dragging, dragStart, startPos, moved
-        local inputChangedConn, inputEndedConn
+--==============================================
+-- Drag botão flutuante (conexões só durante o drag)
+--==============================================
+do
+    local dragging, dragStart, startPos, moved
+    local inputChangedConn, inputEndedConn
 
-        local function disconnectDrag()
-            if inputChangedConn then inputChangedConn:Disconnect(); inputChangedConn = nil end
-            if inputEndedConn then inputEndedConn:Disconnect(); inputEndedConn = nil end
+    local function disconnectDrag()
+        if inputChangedConn then inputChangedConn:Disconnect(); inputChangedConn = nil end
+        if inputEndedConn then inputEndedConn:Disconnect(); inputEndedConn = nil end
+    end
+
+    ToggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging, moved = true, false
+            dragStart = input.Position
+            startPos = ToggleButton.Position
+
+            if not inputChangedConn then
+                inputChangedConn = UserInputService.InputChanged:Connect(function(inp)
+                    if not dragging then return end
+                    -- 🔒 Se LockPosition estiver ativo, NÃO move o botão
+                    if LockPosition then return end
+                    if inp.UserInputType == Enum.UserInputType.MouseMovement
+                        or inp.UserInputType == Enum.UserInputType.Touch then
+                        local delta = inp.Position - dragStart
+                        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then moved = true end
+                        ToggleButton.Position = UDim2.new(
+                            startPos.X.Scale, startPos.X.Offset + delta.X,
+                            startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                        if OrbitController then OrbitController.sync() end
+                    end
+                end)
+            end
+
+            if not inputEndedConn then
+                inputEndedConn = UserInputService.InputEnded:Connect(function(inp)
+                    if inp.UserInputType ~= Enum.UserInputType.MouseButton1
+                        and inp.UserInputType ~= Enum.UserInputType.Touch then return end
+                    if not dragging then return end
+                    -- 🔓 Clique funciona mesmo com LockPosition ativo
+                    if not moved then toggleUI() end
+                    dragging = false
+                    disconnectDrag()
+                end)
+            end
         end
-
-        ToggleButton.InputBegan:Connect(function(input)
-            if LockPosition then return end
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                dragging, moved = true, false
-                dragStart = input.Position
-                startPos = ToggleButton.Position
-
-                if not inputChangedConn then
-                    inputChangedConn = UserInputService.InputChanged:Connect(function(inp)
-                        if LockPosition or not dragging then return end
-                        if inp.UserInputType == Enum.UserInputType.MouseMovement
-                            or inp.UserInputType == Enum.UserInputType.Touch then
-                            local delta = inp.Position - dragStart
-                            if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then moved = true end
-                            ToggleButton.Position = UDim2.new(
-                                startPos.X.Scale, startPos.X.Offset + delta.X,
-                                startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                            if OrbitController then OrbitController.sync() end
-                        end
-                    end)
-                end
-
-                if not inputEndedConn then
-                    inputEndedConn = UserInputService.InputEnded:Connect(function(inp)
-                        if inp.UserInputType ~= Enum.UserInputType.MouseButton1
-                            and inp.UserInputType ~= Enum.UserInputType.Touch then return end
-                        if not dragging then return end
-                        if not moved and not LockPosition then toggleUI() end
-                        dragging = false
-                        disconnectDrag()
-                    end)
-                end
-            end
-        end)
-    end
-
-    -- Drag janela
-    do
-        local dragging, dragStart, startPos
-        Topbar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                startPos = Main.Position
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-                or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - dragStart
-                Main.Position = UDim2.new(
-                    startPos.X.Scale, startPos.X.Offset + delta.X,
-                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            end
-        end)
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end)
-    end
+    end)
+end
 
     --==============================================
     -- Abas
